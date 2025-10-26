@@ -1,0 +1,499 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Evolução Salarial - {{ funcionario.nome }}{% endblock %}
+
+{% block page_title %}Evolução Salarial{% endblock %}
+
+{% block page_styles %}
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #667eea;
+    text-decoration: none;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.info-card {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-label {
+    color: #7f8c8d;
+    font-size: 13px;
+    margin-bottom: 5px;
+}
+
+.info-value {
+    color: #2c3e50;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.toolbar {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+}
+
+.timeline {
+    background: white;
+    border-radius: 10px;
+    padding: 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 40px;
+    padding-bottom: 30px;
+    border-left: 2px solid #e0e0e0;
+}
+
+.timeline-item:last-child {
+    border-left-color: transparent;
+    padding-bottom: 0;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -9px;
+    top: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #667eea;
+    border: 3px solid white;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 15px;
+}
+
+.timeline-date {
+    color: #667eea;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.timeline-changes {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.change-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.change-label {
+    color: #7f8c8d;
+    font-size: 13px;
+}
+
+.change-value {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.value-old {
+    color: #e74c3c;
+    text-decoration: line-through;
+}
+
+.value-new {
+    color: #27ae60;
+    font-weight: 600;
+}
+
+.timeline-obs {
+    color: #555;
+    font-size: 14px;
+    font-style: italic;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #dee2e6;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    max-width: 500px;
+    width: 90%;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-header h2 {
+    color: #2c3e50;
+    font-size: 20px;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #555;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.alert {
+    padding: 12px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    display: none;
+}
+
+.alert-error {
+    background: #fee;
+    color: #c33;
+    border: 1px solid #fcc;
+}
+
+.alert-success {
+    background: #efe;
+    color: #3c3;
+    border: 1px solid #cfc;
+}
+{% endblock %}
+
+{% block page_content %}
+<a href="/funcionarios" class="back-link">← Voltar para lista</a>
+
+<div class="info-card">
+    <h3 style="margin-bottom: 20px; color: #2c3e50;">Informações do Funcionário</h3>
+    <div class="info-grid">
+        <div class="info-item">
+            <div class="info-label">Nome</div>
+            <div class="info-value" id="func-nome">{{ funcionario.nome }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">RE</div>
+            <div class="info-value" id="func-re">{{ funcionario.re }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Cargo Atual</div>
+            <div class="info-value" id="func-cargo">{{ funcionario.cargo }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Salário Atual</div>
+            <div class="info-value" id="func-salario">R$ {{ "%.2f"|format(funcionario.salario_atual|float) }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="toolbar">
+    <h3 style="color: #2c3e50;">Histórico de Promoções</h3>
+    <button class="btn-primary" onclick="abrirModal()">+ Registrar Promoção</button>
+</div>
+
+<div id="alert" class="alert"></div>
+
+<div class="timeline" id="timeline">
+    <div class="empty-state">Carregando...</div>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Registrar Promoção</h2>
+            <button class="close-modal" onclick="fecharModal()">×</button>
+        </div>
+        
+        <form id="promocaoForm">
+            <div class="form-group">
+                <label for="cargo_novo">Novo Cargo *</label>
+                <input type="text" id="cargo_novo" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="salario_novo">Novo Salário *</label>
+                <input type="number" id="salario_novo" step="0.01" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="data_promocao">Data da Promoção *</label>
+                <input type="date" id="data_promocao" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="observacao">Observação</label>
+                <textarea id="observacao" rows="3" placeholder="Motivo da promoção, observações..."></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="submitBtn">Registrar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const funcionarioId = {{ funcionario.id }};
+</script>
+{% endblock %}
+
+{% block page_scripts %}
+function showAlert(message, type) {
+    const alert = document.getElementById('alert');
+    alert.textContent = message;
+    alert.className = `alert alert-${type}`;
+    alert.style.display = 'block';
+    setTimeout(() => {
+        alert.style.display = 'none';
+    }, 5000);
+}
+
+function abrirModal() {
+    document.getElementById('modal').classList.add('show');
+    document.getElementById('data_promocao').valueAsDate = new Date();
+}
+
+function fecharModal() {
+    document.getElementById('modal').classList.remove('show');
+    document.getElementById('promocaoForm').reset();
+}
+
+async function carregarEvolucao() {
+    const timeline = document.getElementById('timeline');
+    
+    try {
+        const response = await fetch(`/api/funcionarios/${funcionarioId}/evolucao`);
+        const data = await response.json();
+        
+        if (data.evolucoes.length === 0) {
+            timeline.innerHTML = '<div class="empty-state"><p>Nenhuma promoção registrada ainda</p></div>';
+        } else {
+            timeline.innerHTML = '';
+            
+            data.evolucoes.forEach(evolucao => {
+                const item = document.createElement('div');
+                item.className = 'timeline-item';
+                
+                const incremento = parseFloat(evolucao.salario_novo) - parseFloat(evolucao.salario_anterior);
+                const percentual = ((incremento / parseFloat(evolucao.salario_anterior)) * 100).toFixed(2);
+                
+                item.innerHTML = `
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-header">
+                            <div class="timeline-date">${evolucao.data_promocao}</div>
+                        </div>
+                        <div class="timeline-changes">
+                            <div class="change-item">
+                                <span class="change-label">Cargo:</span>
+                                <div class="change-value">
+                                    <span class="value-old">${evolucao.cargo_anterior}</span>
+                                    <span>→</span>
+                                    <span class="value-new">${evolucao.cargo_novo}</span>
+                                </div>
+                            </div>
+                            <div class="change-item">
+                                <span class="change-label">Salário:</span>
+                                <div class="change-value">
+                                    <span class="value-old">R$ ${parseFloat(evolucao.salario_anterior).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                                    <span>→</span>
+                                    <span class="value-new">R$ ${parseFloat(evolucao.salario_novo).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                                    <span class="value-new">(+${percentual}%)</span>
+                                </div>
+                            </div>
+                        </div>
+                        ${evolucao.observacao ? `<div class="timeline-obs">${evolucao.observacao}</div>` : ''}
+                    </div>
+                `;
+                
+                timeline.appendChild(item);
+            });
+        }
+        
+        // Atualizar informações do funcionário
+        if (data.funcionario) {
+            document.getElementById('func-cargo').textContent = data.funcionario.cargo;
+            document.getElementById('func-salario').textContent = `R$ ${parseFloat(data.funcionario.salario_atual).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        }
+    } catch (error) {
+        console.error('Erro ao carregar evolução:', error);
+        timeline.innerHTML = '<div class="empty-state"><p>Erro ao carregar dados</p></div>';
+    }
+}
+
+document.getElementById('promocaoForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Salvando...';
+    
+    const formData = {
+        cargo_novo: document.getElementById('cargo_novo').value,
+        salario_novo: document.getElementById('salario_novo').value,
+        data_promocao: document.getElementById('data_promocao').value,
+        observacao: document.getElementById('observacao').value
+    };
+    
+    try {
+        const response = await fetch(`/api/funcionarios/${funcionarioId}/evolucao`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert(data.message, 'success');
+            fecharModal();
+            carregarEvolucao();
+        } else {
+            showAlert(data.message, 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Registrar';
+        }
+    } catch (error) {
+        console.error('Erro ao registrar promoção:', error);
+        showAlert('Erro ao registrar promoção', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Registrar';
+    }
+});
+
+// Fechar modal ao clicar fora
+document.getElementById('modal').addEventListener('click', (e) => {
+    if (e.target.id === 'modal') {
+        fecharModal();
+    }
+});
+
+// Carregar ao iniciar
+document.addEventListener('DOMContentLoaded', carregarEvolucao);
+{% endblock %}

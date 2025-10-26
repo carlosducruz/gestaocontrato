@@ -1,0 +1,81 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Perfil{% endblock %}
+
+{% block page_title %}Meu Perfil{% endblock %}
+
+{% block page_styles %}
+.profile-card {
+    background: white;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    max-width: 600px;
+}
+
+.profile-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.profile-avatar-large {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 48px;
+    font-weight: 600;
+    margin: 0 auto 20px;
+}
+
+.profile-info {
+    display: grid;
+    gap: 20px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.info-label {
+    color: #7f8c8d;
+    font-weight: 500;
+}
+
+.info-value {
+    color: #2c3e50;
+    font-weight: 600;
+}
+{% endblock %}
+
+{% block page_content %}
+<div class="profile-card">
+    <div class="profile-header">
+        <div class="profile-avatar-large">{{ user.username[0].upper() }}</div>
+        <h2 style="color: #2c3e50; margin-bottom: 5px;">{{ user.username }}</h2>
+        <p style="color: #7f8c8d;">Membro desde 2024</p>
+    </div>
+    
+    <div class="profile-info">
+        <div class="info-row">
+            <span class="info-label">Nome de Usuário:</span>
+            <span class="info-value">{{ user.username }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Email:</span>
+            <span class="info-value">{{ user.email }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">ID do Usuário:</span>
+            <span class="info-value">#{{ user.id }}</span>
+        </div>
+    </div>
+</div>
+{% endblock %}

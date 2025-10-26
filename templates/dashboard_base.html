@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block styles %}
+.dashboard {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 260px;
+    background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+    color: white;
+    position: fixed;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+.sidebar-header {
+    padding: 30px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.sidebar-header h2 {
+    font-size: 24px;
+    margin-bottom: 5px;
+}
+
+.sidebar-header p {
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+.sidebar-menu {
+    padding: 20px 0;
+}
+
+.menu-item {
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    color: white;
+    text-decoration: none;
+    transition: background 0.3s;
+}
+
+.menu-item:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.menu-item.active {
+    background: rgba(255,255,255,0.15);
+    border-left: 3px solid #3498db;
+}
+
+.menu-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.main-content {
+    flex: 1;
+    margin-left: 260px;
+    background: #f5f5f5;
+}
+
+.top-bar {
+    background: white;
+    padding: 20px 30px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.top-bar h1 {
+    color: #2c3e50;
+    font-size: 24px;
+}
+
+.user-menu {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+}
+
+.logout-btn {
+    padding: 8px 16px;
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+
+.logout-btn:hover {
+    background: #c0392b;
+}
+
+.content-area {
+    padding: 30px;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+    }
+    
+    .main-content {
+        margin-left: 0;
+    }
+}
+
+{% block page_styles %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    {% include 'sidebar.html' %}
+    
+    <main class="main-content">
+        <div class="top-bar">
+            <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+            <div class="user-menu">
+                <div class="user-avatar">{{ user.username[0].upper() }}</div>
+                <button class="logout-btn" onclick="logout()">Sair</button>
+            </div>
+        </div>
+        
+        <div class="content-area">
+            {% block page_content %}{% endblock %}
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+async function logout() {
+    try {
+        const response = await fetch('/api/logout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            window.location.href = '/login';
+        }
+    } catch (error) {
+        console.error('Erro ao fazer logout:', error);
+        window.location.href = '/login';
+    }
+}
+
+{% block page_scripts %}{% endblock %}
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block page_styles %}
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.stat-card h3 {
+    color: #7f8c8d;
+    font-size: 14px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+.stat-card .value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.stat-card .trend {
+    font-size: 14px;
+    margin-top: 10px;
+    color: #27ae60;
+}
+
+.content-card {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.content-card h2 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+{% endblock %}
+
+{% block page_content %}
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>Usuários Ativos</h3>
+        <div class="value">1,234</div>
+        <div class="trend">+12% este mês</div>
+    </div>
+    
+    <div class="stat-card">
+        <h3>Total de Vendas</h3>
+        <div class="value">R$ 45,2k</div>
+        <div class="trend">+8% este mês</div>
+    </div>
+    
+    <div class="stat-card">
+        <h3>Novos Clientes</h3>
+        <div class="value">89</div>
+        <div class="trend">+23% este mês</div>
+    </div>
+    
+    <div class="stat-card">
+        <h3>Taxa de Conversão</h3>
+        <div class="value">3.2%</div>
+        <div class="trend">+1.5% este mês</div>
+    </div>
+</div>
+
+<div class="content-card">
+    <h2>Atividades Recentes</h2>
+    <p style="color: #7f8c8d;">Bem-vindo ao seu dashboard! Aqui você pode gerenciar suas atividades e visualizar estatísticas importantes.</p>
+</div>
+{% endblock %}

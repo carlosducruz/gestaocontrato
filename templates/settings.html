@@ -1,0 +1,157 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Configurações{% endblock %}
+
+{% block page_title %}Configurações{% endblock %}
+
+{% block page_styles %}
+.settings-card {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    max-width: 800px;
+}
+
+.settings-section {
+    margin-bottom: 30px;
+    padding-bottom: 30px;
+    border-bottom: 1px solid #eee;
+}
+
+.settings-section:last-child {
+    border-bottom: none;
+}
+
+.settings-section h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+}
+
+.setting-label {
+    color: #555;
+}
+
+.setting-description {
+    color: #999;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 50px;
+    height: 26px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.4s;
+    border-radius: 26px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #3498db;
+}
+
+input:checked + .slider:before {
+    transform: translateX(24px);
+}
+{% endblock %}
+
+{% block page_content %}
+<div class="settings-card">
+    <div class="settings-section">
+        <h3>Notificações</h3>
+        <div class="setting-item">
+            <div>
+                <div class="setting-label">Notificações por Email</div>
+                <div class="setting-description">Receba atualizações por email</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="setting-item">
+            <div>
+                <div class="setting-label">Notificações Push</div>
+                <div class="setting-description">Receba notificações no navegador</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+    
+    <div class="settings-section">
+        <h3>Privacidade</h3>
+        <div class="setting-item">
+            <div>
+                <div class="setting-label">Perfil Público</div>
+                <div class="setting-description">Permitir que outros vejam seu perfil</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+        <div class="setting-item">
+            <div>
+                <div class="setting-label">Mostrar Status Online</div>
+                <div class="setting-description">Exibir quando você está online</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+    
+    <div class="settings-section">
+        <h3>Aparência</h3>
+        <div class="setting-item">
+            <div>
+                <div class="setting-label">Modo Escuro</div>
+                <div class="setting-description">Usar tema escuro na interface</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+</div>
+{% endblock %}

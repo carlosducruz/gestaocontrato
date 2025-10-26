@@ -136,6 +136,15 @@ tr:hover {
     background: #8e44ad;
 }
 
+.btn-absence {
+    background: #f39c12;
+    color: white;
+}
+
+.btn-absence:hover {
+    background: #e67e22;
+}
+
 .btn-delete {
     background: #e74c3c;
     color: white;
@@ -156,6 +165,14 @@ tr:hover {
     padding: 40px;
     color: #999;
 }
+.btn-folga {
+    background: #16a085;
+    color: white;
+}
+.btn-folga:hover {
+    background: #138d75;
+}
+
 {% endblock %}
 
 {% block page_content %}
@@ -240,24 +257,14 @@ async function carregarFuncionarios() {
                     <td>${func.data_admissao}</td>
                     <td>${func.tempo_empresa}</td>
                     <td>R$ ${parseFloat(func.salario_atual).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                    <td>
-                        <span class="badge ${func.ativo ? 'badge-success' : 'badge-danger'}">
-                            ${func.ativo ? 'Ativo' : 'Inativo'}
-                        </span>
-                    </td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="btn-icon btn-edit" onclick="editar(${func.id})" title="Editar">
-                                ✏️
-                            </button>
-                            <button class="btn-icon btn-history" onclick="verEvolucao(${func.id})" title="Evolução Salarial">
-                                📊
-                            </button>
-                            <button class="btn-icon btn-delete" onclick="excluir(${func.id}, '${func.nome}')" title="Excluir">
-                                🗑️
-                            </button>
-                        </div>
-                    </td>
+                    <td><span class='badge ${func.ativo ? 'badge-success' : 'badge-danger'}'>${func.ativo ? 'Ativo' : 'Inativo'}</span></td>
+                    <td><div class='action-buttons'>
+                        <button class='btn-icon btn-edit' onclick='editar(${func.id})' title='Editar'>✏️</button>
+                        <button class='btn-icon btn-history' onclick='verEvolucao(${func.id})' title='Evolução Salarial'>📊</button>
+                        <button class='btn-icon btn-absence' onclick='verFaltas(${func.id})' title='Controle de Faltas'>📅</button>
+                        <button class='btn-icon btn-folga' onclick='verFolgas(${func.id})' title='Folgas Trabalhadas'>🛏️</button>
+                        <button class='btn-icon btn-delete' onclick='excluir(${func.id}, "${func.nome}")' title='Excluir'>🗑️</button>
+                    </div></td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -279,6 +286,18 @@ function editar(id) {
 function verEvolucao(id) {
     window.location.href = `/funcionarios/${id}/evolucao`;
 }
+
+ 
+function verFolgas(id) {
+    window.location.href = `/funcionarios/${id}/folgas`;
+}
+
+ 
+function verFaltas(id) {
+    window.location.href = `/funcionarios/${id}/faltas`;
+}
+
+
 
 async function excluir(id, nome) {
     if (!confirm(`Deseja realmente excluir o funcionário ${nome}?\n\nEsta ação não pode ser desfeita e todos os registros de evolução salarial serão perdidos.`)) {

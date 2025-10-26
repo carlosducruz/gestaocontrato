@@ -45,6 +45,8 @@ class Funcionario(db.Model):
     
     # Relacionamento com evolução salarial
     evolucoes = db.relationship('EvolucaoSalarial', backref='funcionario', lazy=True, cascade='all, delete-orphan')
+    faltas = db.relationship('Falta', backref='funcionario', lazy=True, cascade='all, delete-orphan')
+    folgas_trabalhadas = db.relationship('FolgaTrabalhada', foreign_keys='FolgaTrabalhada.funcionario_id', backref='funcionario', lazy=True, cascade='all, delete-orphan')
     
     def to_dict(self):
         tempo_empresa = self.calcular_tempo_empresa()
@@ -88,6 +90,56 @@ class EvolucaoSalarial(db.Model):
             'cargo_novo': self.cargo_novo,
             'salario_novo': float(self.salario_novo),
             'data_promocao': self.data_promocao.strftime('%d/%m/%Y'),
+            'observacao': self.observacao
+        }
+
+class Falta(db.Model):
+    __tablename__ = 'faltas'
+    id = db.Column(db.Integer, primary_key=True)
+    funcionario_id = db.Column(db.Integer, db.ForeignKey('funcionarios.id'), nullable=False)
+    data_falta = db.Column(db.Date, nullable=False)
+    atestada = db.Column(db.Boolean, default=False)
+    motivo = db.Column(db.Text, nullable=True)
+    arquivo_atestado = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'funcionario_id': self.funcionario_id,
+            'data_falta': self.data_falta.strftime('%d/%m/%Y'),
+            'data_falta_iso': self.data_falta.strftime('%Y-%m-%d'),
+            'atestada': self.atestada,
+            'motivo': self.motivo,
+            'arquivo_atestado': self.arquivo_atestado
+        }
+
+class FolgaTrabalhada(db.Model):
+    __tablename__ = 'folgas_trabalhadas'
+    id = db.Column(db.Integer, primary_key=True)
+    funcionario_id = db.Column(db.Integer, db.ForeignKey('funcionarios.id'), nullable=False)
+    data_folga = db.Column(db.Date, nullable=False)
+    motivo = db.Column(db.String(100), nullable=False)  # 'Reforço por demanda' ou 'Substituição por falta'
+    valor_diaria = db.Column(db.Numeric(10, 2), nullable=False)
+    funcionario_substituido_id = db.Column(db.Integer, db.ForeignKey('funcionarios.id'), nullable=True)
+    observacao = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relacionamento com o funcionário substituído
+    funcionario_substituido = db.relationship('Funcionario', foreign_keys=[funcionario_substituido_id])
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'funcionario_id': self.funcionario_id,
+            'data_folga': self.data_folga.strftime('%d/%m/%Y'),
+            'data_folga_iso': self.data_folga.strftime('%Y-%m-%d'),
+            'motivo': self.motivo,
+            'valor_diaria': float(self.valor_diaria),
+            'funcionario_substituido_id': self.funcionario_substituido_id,
+            'funcionario_substituido_nome': self.funcionario_substituido.nome if self.funcionario_substituido else None,
             'observacao': self.observacao
         }
 
@@ -150,6 +202,18 @@ def funcionarios_editar(id):
 def funcionarios_evolucao(id):
     funcionario = Funcionario.query.get_or_404(id)
     return render_template('funcionarios_evolucao.html', user=current_user, funcionario=funcionario)
+
+@app.route('/funcionarios/<int:id>/faltas')
+@login_required
+def funcionarios_faltas(id):
+    funcionario = Funcionario.query.get_or_404(id)
+    return render_template('funcionarios_faltas.html', user=current_user, funcionario=funcionario)
+
+@app.route('/funcionarios/<int:id>/folgas')
+@login_required
+def funcionarios_folgas(id):
+    funcionario = Funcionario.query.get_or_404(id)
+    return render_template('funcionarios_folgas.html', user=current_user, funcionario=funcionario)
 
 # API Routes - Autenticação
 @app.route('/api/login', methods=['POST'])
@@ -367,6 +431,165 @@ def api_evolucao_criar(id):
             'message': 'Promoção registrada com sucesso',
             'evolucao': evolucao.to_dict()
         })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# API Routes - Faltas
+@app.route('/api/funcionarios/<int:id>/faltas', methods=['GET'])
+@login_required
+def api_faltas_listar(id):
+    funcionario = Funcionario.query.get_or_404(id)
+    faltas = Falta.query.filter_by(funcionario_id=id).order_by(Falta.data_falta.desc()).all()
+    
+    return jsonify({
+        'success': True,
+        'funcionario': funcionario.to_dict(),
+        'faltas': [f.to_dict() for f in faltas]
+    })
+
+@app.route('/api/funcionarios/<int:id>/faltas', methods=['POST'])
+@login_required
+def api_faltas_criar(id):
+    funcionario = Funcionario.query.get_or_404(id)
+    data = request.get_json()
+    
+    try:
+        falta = Falta(
+            funcionario_id=id,
+            data_falta=datetime.strptime(data['data_falta'], '%Y-%m-%d').date(),
+            atestada=data.get('atestada', False),
+            motivo=data.get('motivo'),
+            arquivo_atestado=data.get('arquivo_atestado')
+        )
+        
+        db.session.add(falta)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Falta registrada com sucesso',
+            'falta': falta.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/funcionarios/<int:funcionario_id>/faltas/<int:falta_id>', methods=['PUT'])
+@login_required
+def api_faltas_atualizar(funcionario_id, falta_id):
+    falta = Falta.query.filter_by(id=falta_id, funcionario_id=funcionario_id).first_or_404()
+    data = request.get_json()
+    
+    try:
+        falta.data_falta = datetime.strptime(data['data_falta'], '%Y-%m-%d').date()
+        falta.atestada = data.get('atestada', False)
+        falta.motivo = data.get('motivo')
+        if data.get('arquivo_atestado'):
+            falta.arquivo_atestado = data['arquivo_atestado']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Falta atualizada com sucesso',
+            'falta': falta.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/funcionarios/<int:funcionario_id>/faltas/<int:falta_id>', methods=['DELETE'])
+@login_required
+def api_faltas_deletar(funcionario_id, falta_id):
+    falta = Falta.query.filter_by(id=falta_id, funcionario_id=funcionario_id).first_or_404()
+    
+    try:
+        db.session.delete(falta)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Falta excluída com sucesso'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# API Routes - Folgas Trabalhadas
+@app.route('/api/funcionarios/<int:id>/folgas', methods=['GET'])
+@login_required
+def api_folgas_listar(id):
+    funcionario = Funcionario.query.get_or_404(id)
+    folgas = FolgaTrabalhada.query.filter_by(funcionario_id=id).order_by(FolgaTrabalhada.data_folga.desc()).all()
+    
+    # Buscar todos os funcionários para o select
+    todos_funcionarios = Funcionario.query.filter_by(ativo=True).order_by(Funcionario.nome).all()
+    
+    return jsonify({
+        'success': True,
+        'funcionario': funcionario.to_dict(),
+        'folgas': [f.to_dict() for f in folgas],
+        'funcionarios': [{'id': f.id, 'nome': f.nome, 're': f.re} for f in todos_funcionarios]
+    })
+
+@app.route('/api/funcionarios/<int:id>/folgas', methods=['POST'])
+@login_required
+def api_folgas_criar(id):
+    funcionario = Funcionario.query.get_or_404(id)
+    data = request.get_json()
+    
+    try:
+        folga = FolgaTrabalhada(
+            funcionario_id=id,
+            data_folga=datetime.strptime(data['data_folga'], '%Y-%m-%d').date(),
+            motivo=data['motivo'],
+            valor_diaria=data['valor_diaria'],
+            funcionario_substituido_id=data.get('funcionario_substituido_id'),
+            observacao=data.get('observacao')
+        )
+        
+        db.session.add(folga)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Folga trabalhada registrada com sucesso',
+            'folga': folga.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/funcionarios/<int:funcionario_id>/folgas/<int:folga_id>', methods=['PUT'])
+@login_required
+def api_folgas_atualizar(funcionario_id, folga_id):
+    folga = FolgaTrabalhada.query.filter_by(id=folga_id, funcionario_id=funcionario_id).first_or_404()
+    data = request.get_json()
+    
+    try:
+        folga.data_folga = datetime.strptime(data['data_folga'], '%Y-%m-%d').date()
+        folga.motivo = data['motivo']
+        folga.valor_diaria = data['valor_diaria']
+        folga.funcionario_substituido_id = data.get('funcionario_substituido_id')
+        folga.observacao = data.get('observacao')
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Folga trabalhada atualizada com sucesso',
+            'folga': folga.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/funcionarios/<int:funcionario_id>/folgas/<int:folga_id>', methods=['DELETE'])
+@login_required
+def api_folgas_deletar(funcionario_id, folga_id):
+    folga = FolgaTrabalhada.query.filter_by(id=folga_id, funcionario_id=funcionario_id).first_or_404()
+    
+    try:
+        db.session.delete(folga)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Folga trabalhada excluída com sucesso'})
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500

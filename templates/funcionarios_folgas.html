@@ -1,0 +1,651 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Folgas Trabalhadas - {{ funcionario.nome }}{% endblock %}
+
+{% block page_title %}Folgas Trabalhadas{% endblock %}
+
+{% block page_styles %}
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #667eea;
+    text-decoration: none;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.info-card {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-label {
+    color: #7f8c8d;
+    font-size: 13px;
+    margin-bottom: 5px;
+}
+
+.info-value {
+    color: #2c3e50;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.toolbar {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+}
+
+.table-container {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    background: #f8f9fa;
+}
+
+th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 2px solid #dee2e6;
+}
+
+td {
+    padding: 15px;
+    border-bottom: 1px solid #dee2e6;
+    color: #555;
+}
+
+tr:hover {
+    background: #f8f9fa;
+}
+
+.badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-info {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.badge-warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-icon {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s;
+}
+
+.btn-edit {
+    background: #3498db;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #2980b9;
+}
+
+.btn-delete {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #c0392b;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-header h2 {
+    color: #2c3e50;
+    font-size: 20px;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #555;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.substituido-section {
+    display: none;
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+.substituido-section.show {
+    display: block;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.alert {
+    padding: 12px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    display: none;
+}
+
+.alert-error {
+    background: #fee;
+    color: #c33;
+    border: 1px solid #fcc;
+}
+
+.alert-success {
+    background: #efe;
+    color: #3c3;
+    border: 1px solid #cfc;
+}
+{% endblock %}
+
+{% block page_content %}
+<a href="/funcionarios" class="back-link">← Voltar para lista</a>
+
+<div class="info-card">
+    <h3 style="margin-bottom: 20px; color: #2c3e50;">Informações do Funcionário</h3>
+    <div class="info-grid">
+        <div class="info-item">
+            <div class="info-label">Nome</div>
+            <div class="info-value">{{ funcionario.nome }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">RE</div>
+            <div class="info-value">{{ funcionario.re }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Cargo</div>
+            <div class="info-value">{{ funcionario.cargo }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Total de Folgas</div>
+            <div class="info-value" id="total-folgas">0</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Valor Total</div>
+            <div class="info-value" id="total-valor">R$ 0,00</div>
+        </div>
+    </div>
+</div>
+
+<div class="toolbar">
+    <h3 style="color: #2c3e50;">Registro de Folgas Trabalhadas</h3>
+    <button class="btn-primary" onclick="abrirModal()">+ Registrar Folga</button>
+</div>
+
+<div id="alert" class="alert"></div>
+
+<div class="table-container">
+    <div id="loading" style="text-align: center; padding: 40px; color: #999;">Carregando...</div>
+    <div id="content" style="display: none;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Motivo</th>
+                    <th>Valor Diária</th>
+                    <th>Funcionário Substituído</th>
+                    <th>Observação</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-folgas">
+            </tbody>
+        </table>
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <p>Nenhuma folga trabalhada registrada</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modal-title">Registrar Folga Trabalhada</h2>
+            <button class="close-modal" onclick="fecharModal()">×</button>
+        </div>
+        
+        <form id="folgaForm">
+            <input type="hidden" id="folga_id">
+            
+            <div class="form-group">
+                <label for="data_folga">Data da Folga Trabalhada *</label>
+                <input type="date" id="data_folga" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="motivo">Motivo *</label>
+                <select id="motivo" required onchange="toggleSubstituido()">
+                    <option value="">Selecione...</option>
+                    <option value="Reforço por demanda">Reforço por demanda</option>
+                    <option value="Substituição por falta">Substituição por falta</option>
+                </select>
+            </div>
+            
+            <div id="substituido-section" class="substituido-section">
+                <div class="form-group">
+                    <label for="funcionario_substituido_id">Funcionário Substituído *</label>
+                    <select id="funcionario_substituido_id">
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="valor_diaria">Valor da Diária (R$) *</label>
+                <input type="number" id="valor_diaria" step="0.01" min="0" required placeholder="0.00">
+            </div>
+            
+            <div class="form-group">
+                <label for="observacao">Observação</label>
+                <textarea id="observacao" rows="3" placeholder="Informações adicionais..."></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="submitBtn">Registrar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const funcionarioId = {{ funcionario.id }};
+let modoEdicao = false;
+let todosFuncionarios = [];
+</script>
+{% endblock %}
+
+{% block page_scripts %}
+function showAlert(message, type) {
+    const alert = document.getElementById('alert');
+    alert.textContent = message;
+    alert.className = `alert alert-${type}`;
+    alert.style.display = 'block';
+    setTimeout(() => {
+        alert.style.display = 'none';
+    }, 5000);
+}
+
+function toggleSubstituido() {
+    const motivo = document.getElementById('motivo').value;
+    const section = document.getElementById('substituido-section');
+    const select = document.getElementById('funcionario_substituido_id');
+    
+    if (motivo === 'Substituição por falta') {
+        section.classList.add('show');
+        select.required = true;
+    } else {
+        section.classList.remove('show');
+        select.required = false;
+        select.value = '';
+    }
+}
+
+function abrirModal(folga = null) {
+    modoEdicao = folga !== null;
+    document.getElementById('modal-title').textContent = modoEdicao ? 'Editar Folga Trabalhada' : 'Registrar Folga Trabalhada';
+    document.getElementById('submitBtn').textContent = modoEdicao ? 'Atualizar' : 'Registrar';
+    
+    if (modoEdicao) {
+        document.getElementById('folga_id').value = folga.id;
+        document.getElementById('data_folga').value = folga.data_folga_iso;
+        document.getElementById('motivo').value = folga.motivo;
+        document.getElementById('valor_diaria').value = folga.valor_diaria;
+        document.getElementById('funcionario_substituido_id').value = folga.funcionario_substituido_id || '';
+        document.getElementById('observacao').value = folga.observacao || '';
+        toggleSubstituido();
+    } else {
+        document.getElementById('folgaForm').reset();
+        document.getElementById('folga_id').value = '';
+        document.getElementById('substituido-section').classList.remove('show');
+    }
+    
+    document.getElementById('modal').classList.add('show');
+}
+
+function fecharModal() {
+    document.getElementById('modal').classList.remove('show');
+    document.getElementById('folgaForm').reset();
+    modoEdicao = false;
+}
+
+async function carregarFolgas() {
+    const loading = document.getElementById('loading');
+    const content = document.getElementById('content');
+    const tbody = document.getElementById('tbody-folgas');
+    const emptyState = document.getElementById('empty-state');
+    
+    loading.style.display = 'block';
+    content.style.display = 'none';
+    
+    try {
+        const response = await fetch(`/api/funcionarios/${funcionarioId}/folgas`);
+        const data = await response.json();
+        
+        tbody.innerHTML = '';
+        
+        // Armazenar lista de funcionários para o select
+        todosFuncionarios = data.funcionarios;
+        preencherSelectFuncionarios();
+        
+        // Calcular totais
+        const totalFolgas = data.folgas.length;
+        const totalValor = data.folgas.reduce((sum, f) => sum + parseFloat(f.valor_diaria), 0);
+        
+        document.getElementById('total-folgas').textContent = totalFolgas;
+        document.getElementById('total-valor').textContent = `R$ ${totalValor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
+        
+        if (data.folgas.length === 0) {
+            emptyState.style.display = 'block';
+        } else {
+            emptyState.style.display = 'none';
+            
+            data.folgas.forEach(folga => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${folga.data_folga}</strong></td>
+                    <td>
+                        <span class="badge ${folga.motivo === 'Reforço por demanda' ? 'badge-info' : 'badge-warning'}">
+                            ${folga.motivo}
+                        </span>
+                    </td>
+                    <td><strong>R$ ${parseFloat(folga.valor_diaria).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></td>
+                    <td>${folga.funcionario_substituido_nome || '-'}</td>
+                    <td>${folga.observacao || '-'}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-icon btn-edit" onclick='editarFolga(${JSON.stringify(folga)})' title="Editar">
+                                ✏️
+                            </button>
+                            <button class="btn-icon btn-delete" onclick="excluirFolga(${folga.id}, '${folga.data_folga}')" title="Excluir">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        loading.style.display = 'none';
+        content.style.display = 'block';
+    } catch (error) {
+        console.error('Erro ao carregar folgas:', error);
+        loading.style.display = 'none';
+        alert('Erro ao carregar folgas trabalhadas');
+    }
+}
+
+function preencherSelectFuncionarios() {
+    const select = document.getElementById('funcionario_substituido_id');
+    select.innerHTML = '<option value="">Selecione...</option>';
+    
+    todosFuncionarios.forEach(func => {
+        // Não mostrar o próprio funcionário na lista
+        if (func.id !== funcionarioId) {
+            const option = document.createElement('option');
+            option.value = func.id;
+            option.textContent = `${func.nome} (RE: ${func.re})`;
+            select.appendChild(option);
+        }
+    });
+}
+
+function editarFolga(folga) {
+    abrirModal(folga);
+}
+
+async function excluirFolga(id, data) {
+    if (!confirm(`Deseja realmente excluir a folga trabalhada do dia ${data}?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/funcionarios/${funcionarioId}/folgas/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert(data.message, 'success');
+            carregarFolgas();
+        } else {
+            showAlert('Erro: ' + data.message, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao excluir folga:', error);
+        showAlert('Erro ao excluir folga trabalhada', 'error');
+    }
+}
+
+document.getElementById('folgaForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Salvando...';
+    
+    const folgaId = document.getElementById('folga_id').value;
+    const motivo = document.getElementById('motivo').value;
+    
+    const formData = {
+        data_folga: document.getElementById('data_folga').value,
+        motivo: motivo,
+        valor_diaria: document.getElementById('valor_diaria').value,
+        observacao: document.getElementById('observacao').value
+    };
+    
+    // Só adicionar funcionario_substituido_id se for substituição
+    if (motivo === 'Substituição por falta') {
+        const substituido = document.getElementById('funcionario_substituido_id').value;
+        if (!substituido) {
+            showAlert('Selecione o funcionário substituído', 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            return;
+        }
+        formData.funcionario_substituido_id = substituido;
+    }
+    
+    try {
+        let url = `/api/funcionarios/${funcionarioId}/folgas`;
+        let method = 'POST';
+        
+        if (modoEdicao && folgaId) {
+            url = `/api/funcionarios/${funcionarioId}/folgas/${folgaId}`;
+            method = 'PUT';
+        }
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert(data.message, 'success');
+            fecharModal();
+            carregarFolgas();
+        } else {
+            showAlert(data.message, 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    } catch (error) {
+        console.error('Erro ao salvar folga:', error);
+        showAlert('Erro ao salvar folga trabalhada', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+});
+
+// Fechar modal ao clicar fora
+document.getElementById('modal').addEventListener('click', (e) => {
+    if (e.target.id === 'modal') {
+        fecharModal();
+    }
+});
+
+// Carregar ao iniciar
+document.addEventListener('DOMContentLoaded', carregarFolgas);
+{% endblock %}

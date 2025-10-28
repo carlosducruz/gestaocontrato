@@ -365,7 +365,53 @@ def register():
 @app.route('/home')
 @login_required
 def home():
-    return render_template('home.html', user=current_user)
+    from datetime import datetime
+    now = datetime.now()
+    # Resumo de atendimentos por cliente no mês corrente
+    atendimentos = Atendimento.query.filter(
+        db.extract('month', Atendimento.data_atendimento) == now.month,
+        db.extract('year', Atendimento.data_atendimento) == now.year
+    ).all()
+    resumo_clientes = []
+    from collections import defaultdict
+    clientes_stats = defaultdict(lambda: {'nome': '', 'qtd': 0, 'total_tempo': 0, 'tempos': []})
+    for a in atendimentos:
+        cliente_nome = a.endereco.cliente.nome if a.endereco and a.endereco.cliente else 'N/A'
+        tempo = a.calcular_tempo_atendimento() if hasattr(a, 'calcular_tempo_atendimento') else 0
+        cid = a.endereco.cliente_id if a.endereco and a.endereco.cliente else None
+        if cid is not None:
+            clientes_stats[cid]['nome'] = cliente_nome
+            clientes_stats[cid]['qtd'] += 1
+            clientes_stats[cid]['total_tempo'] += tempo
+            clientes_stats[cid]['tempos'].append(tempo)
+    for cid, stats in clientes_stats.items():
+        media_tempo = round(stats['total_tempo'] / stats['qtd'], 1) if stats['qtd'] else 0
+        maior_tempo = max(stats['tempos']) if stats['tempos'] else 0
+        resumo_clientes.append({
+            'nome': stats['nome'],
+            'qtd': stats['qtd'],
+            'total_tempo': stats['total_tempo'],
+            'media_tempo': media_tempo,
+            'maior_tempo': maior_tempo
+        })
+    # Contar usuários ativos
+    usuarios_ativos = User.query.count()
+    clientes_ativos = Cliente.query.filter_by(ativo=True).count()
+    from datetime import datetime
+    now = datetime.now()
+    atendimentos_mes = Atendimento.query.filter(
+        db.extract('month', Atendimento.data_atendimento) == now.month,
+        db.extract('year', Atendimento.data_atendimento) == now.year
+    ).count()
+    return render_template(
+        'home.html',
+        user=current_user,
+        usuarios_ativos=usuarios_ativos,
+        clientes_ativos=clientes_ativos,
+        atendimentos_mes=atendimentos_mes,
+        now=now,
+        resumo_clientes=resumo_clientes
+    )
 
 @app.route('/profile')
 @login_required

@@ -55,31 +55,51 @@
 <div class="stats-grid">
     <div class="stat-card">
         <h3>Usuários Ativos</h3>
-        <div class="value">1,234</div>
-        <div class="trend">+12% este mês</div>
+        <div class="value">{{ usuarios_ativos }}</div>
+        <div class="trend">&nbsp;</div>
     </div>
-    
     <div class="stat-card">
-        <h3>Total de Vendas</h3>
-        <div class="value">R$ 45,2k</div>
-        <div class="trend">+8% este mês</div>
+        <h3>Clientes Ativos</h3>
+        <div class="value">{{ clientes_ativos }}</div>
+        <div class="trend">&nbsp;</div>
     </div>
-    
     <div class="stat-card">
-        <h3>Novos Clientes</h3>
-        <div class="value">89</div>
-        <div class="trend">+23% este mês</div>
-    </div>
-    
-    <div class="stat-card">
-        <h3>Taxa de Conversão</h3>
-        <div class="value">3.2%</div>
-        <div class="trend">+1.5% este mês</div>
+    <h3>Quantidade Atendimentos - {{ now.strftime('%m/%Y') }}</h3>
+        <div class="value">{{ atendimentos_mes }}</div>
+        <div class="trend">&nbsp;</div>
     </div>
 </div>
 
 <div class="content-card">
     <h2>Atividades Recentes</h2>
     <p style="color: #7f8c8d;">Bem-vindo ao seu dashboard! Aqui você pode gerenciar suas atividades e visualizar estatísticas importantes.</p>
+
+    <div style="margin-top:30px;">
+        <h3>Resumo de Atendimentos por Cliente ({{ now.strftime('%m/%Y') }})</h3>
+        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+            <thead>
+                <tr style="background:#f4f4f4;">
+                    <th style="padding:8px; border:1px solid #eee; text-align:left;">Cliente</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:right;">Qtd Atendimentos</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:right;">Tempo Total (min)</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:right;">Tempo Médio (min)</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:right;">Maior Tempo (min)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cliente in resumo_clientes %}
+                <tr>
+                    <td style="padding:8px; border:1px solid #eee;">{{ cliente.nome }}</td>
+                    <td style="padding:8px; border:1px solid #eee; text-align:right;">{{ cliente.qtd }}</td>
+                    <td style="padding:8px; border:1px solid #eee; text-align:right;">{{ cliente.total_tempo }}</td>
+                    <td style="padding:8px; border:1px solid #eee; text-align:right;">{{ cliente.media_tempo }}</td>
+                    <td style="padding:8px; border:1px solid #eee; text-align:right;">{{ cliente.maior_tempo }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Nenhum atendimento registrado este mês.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}

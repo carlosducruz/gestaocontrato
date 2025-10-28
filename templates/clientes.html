@@ -1,0 +1,345 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Clientes{% endblock %}
+
+{% block page_title %}Gestão de Clientes{% endblock %}
+
+{% block page_styles %}
+.toolbar {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+
+.filter-btn.active {
+    background: #3498db;
+    color: white;
+    border-color: #3498db;
+}
+
+.btn-primary {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+}
+
+.table-container {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    background: #f8f9fa;
+}
+
+th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 2px solid #dee2e6;
+}
+
+td {
+    padding: 15px;
+    border-bottom: 1px solid #dee2e6;
+    color: #555;
+}
+
+tr:hover {
+    background: #f8f9fa;
+}
+
+.badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.badge-danger {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-icon {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s;
+}
+
+.btn-edit {
+    background: #3498db;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #2980b9;
+}
+
+.btn-address {
+    background: #16a085;
+    color: white;
+}
+
+.btn-address:hover {
+    background: #138d75;
+}
+
+.btn-delete {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #c0392b;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+}
+
+.portaria-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #e3f2fd;
+    color: #1976d2;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 5px;
+}
+{% endblock %}
+
+{% block page_content %}
+<div class="toolbar">
+    <div class="filter-buttons">
+        <button class="filter-btn active" data-filter="todos" onclick="filtrar('todos')">Todos</button>
+        <button class="filter-btn" data-filter="ativos" onclick="filtrar('ativos')">Ativos</button>
+        <button class="filter-btn" data-filter="inativos" onclick="filtrar('inativos')">Inativos</button>
+        <button class="filter-btn" data-filter="com-portaria" onclick="filtrar('com-portaria')">Com Portaria Remota</button>
+        <button class="filter-btn" data-filter="sem-portaria" onclick="filtrar('sem-portaria')">Sem Portaria Remota</button>
+    </div>
+    <a href="/clientes/novo" class="btn-primary">+ Novo Cliente</a>
+</div>
+
+<div class="table-container">
+    <div id="loading" class="loading">Carregando...</div>
+    <div id="content" style="display: none;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>CNPJ</th>
+                    <th>Atendimentos do Mês</th>
+                    <th>Média Tempo Atendimento (min)</th>
+                    <th>Endereços</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-clientes">
+            </tbody>
+        </table>
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <p>Nenhum cliente encontrado</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+let filtroAtual = 'todos';
+let todosClientes = [];
+
+function filtrar(filtro) {
+    filtroAtual = filtro;
+    
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.filter === filtro) {
+            btn.classList.add('active');
+        }
+    });
+    
+    aplicarFiltroLocal();
+}
+
+async function carregarClientes() {
+    const loading = document.getElementById('loading');
+    const content = document.getElementById('content');
+    
+    loading.style.display = 'block';
+    content.style.display = 'none';
+    
+    try {
+        const response = await fetch('/api/clientes?filtro=todos');
+        const data = await response.json();
+        
+        todosClientes = data.clientes;
+        aplicarFiltroLocal();
+        
+        loading.style.display = 'none';
+        content.style.display = 'block';
+    } catch (error) {
+        console.error('Erro ao carregar clientes:', error);
+        loading.style.display = 'none';
+        alert('Erro ao carregar clientes');
+    }
+}
+
+function aplicarFiltroLocal() {
+    const tbody = document.getElementById('tbody-clientes');
+    const emptyState = document.getElementById('empty-state');
+    
+    let clientesFiltrados = todosClientes;
+    
+    // Aplicar filtro
+    if (filtroAtual === 'ativos') {
+        clientesFiltrados = todosClientes.filter(c => c.ativo);
+    } else if (filtroAtual === 'inativos') {
+        clientesFiltrados = todosClientes.filter(c => !c.ativo);
+    } else if (filtroAtual === 'com-portaria') {
+        clientesFiltrados = todosClientes.filter(c => c.tem_portaria_remota);
+    } else if (filtroAtual === 'sem-portaria') {
+        clientesFiltrados = todosClientes.filter(c => !c.tem_portaria_remota);
+    }
+    
+    tbody.innerHTML = '';
+    
+    if (clientesFiltrados.length === 0) {
+        emptyState.style.display = 'block';
+    } else {
+        emptyState.style.display = 'none';
+        
+        clientesFiltrados.forEach(cliente => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>
+                    <strong>${cliente.nome}</strong>
+                    ${cliente.tem_portaria_remota ? '<span class="portaria-badge">🏢 Portaria Remota</span>' : ''}
+                </td>
+                <td>${cliente.cnpj}</td>
+                <td>${cliente.atendimentos_mes}</td>
+                <td>${cliente.media_tempo_atendimento_mes}</td>
+                <td>${cliente.enderecos_ativos}/${cliente.total_enderecos}</td>
+                <td>
+                    <span class="badge ${cliente.ativo ? 'badge-success' : 'badge-danger'}">
+                        ${cliente.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                </td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-icon btn-edit" onclick="editar(${cliente.id})" title="Editar">
+                            ✏️
+                        </button>
+                        <button class="btn-icon btn-address" onclick="verEnderecos(${cliente.id})" title="Endereços">
+                            📍
+                        </button>
+                        <button class="btn-icon btn-delete" onclick="excluir(${cliente.id}, '${cliente.nome}')" title="Excluir">
+                            🗑️
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+}
+
+function editar(id) {
+    window.location.href = `/clientes/${id}/editar`;
+}
+
+function verEnderecos(id) {
+    window.location.href = `/clientes/${id}/enderecos`;
+}
+
+async function excluir(id, nome) {
+    if (!confirm(`Deseja realmente excluir o cliente ${nome}?\n\nTodos os endereços serão excluídos também!`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/clientes/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message);
+            carregarClientes();
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Erro ao excluir cliente:', error);
+        alert('Erro ao excluir cliente');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', carregarClientes);
+{% endblock %}

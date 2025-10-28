@@ -1,0 +1,444 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Atendimentos{% endblock %}
+
+{% block page_title %}Gestão de Atendimentos{% endblock %}
+
+{% block page_styles %}
+.toolbar {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.filter-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.filter-group label {
+    color: #555;
+    font-weight: 500;
+}
+
+.filter-group select,
+.filter-group input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.btn-primary {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.stat-card h3 {
+    color: #7f8c8d;
+    font-size: 13px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+.stat-card .value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.table-container {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    background: #f8f9fa;
+}
+
+th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 2px solid #dee2e6;
+}
+
+td {
+    padding: 15px;
+    border-bottom: 1px solid #dee2e6;
+    color: #555;
+}
+
+tr:hover {
+    background: #f8f9fa;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-icon {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s;
+}
+
+.btn-edit {
+    background: #3498db;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #2980b9;
+}
+
+.btn-delete {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #c0392b;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+}
+
+.historico-preview {
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stats-por-endereco {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.stats-por-endereco h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+.endereco-stat {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.endereco-stat:last-child {
+    border-bottom: none;
+}
+
+.endereco-nome {
+    color: #555;
+    font-weight: 500;
+}
+
+.endereco-total {
+    color: #667eea;
+    font-weight: 600;
+}
+{% endblock %}
+
+{% block page_content %}
+<div class="toolbar">
+    <div class="filter-group">
+        <label for="filtro-mes">Mês:</label>
+        <input type="month" id="filtro-mes">
+    </div>
+    
+    <div class="filter-group">
+        <label for="filtro-endereco">Endereço:</label>
+        <select id="filtro-endereco">
+            <option value="">Todos</option>
+        </select>
+    </div>
+    
+    <button class="btn-primary" onclick="aplicarFiltros()">Filtrar</button>
+    
+    <a href="/atendimentos/novo" class="btn-primary">+ Novo Atendimento</a>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>Total de Atendimentos</h3>
+        <div class="value" id="total-atendimentos">0</div>
+    </div>
+</div>
+
+<div id="stats-por-endereco" class="stats-por-endereco" style="display: none;">
+    <h3>Atendimentos por Endereço (Período Selecionado)</h3>
+    <div id="lista-stats-endereco"></div>
+</div>
+
+<div class="table-container">
+    <div id="loading" class="loading">Carregando...</div>
+    <div id="content" style="display: none;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Cliente / Endereço</th>
+                    <th>Funcionário</th>
+                    <th>Chegada</th>
+                    <th>Início - Fim</th>
+                    <th>Tempo Atend.</th>
+                    <th>Deslocamento</th>
+                    <th>Histórico</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-atendimentos">
+            </tbody>
+        </table>
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <p>Nenhum atendimento encontrado</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+let enderecos = [];
+let filtroMes = '';
+let filtroEndereco = '';
+
+async function carregarEnderecos() {
+    try {
+        const response = await fetch('/api/atendimentos');
+        const data = await response.json();
+        
+        if (data.success) {
+            enderecos = data.enderecos;
+            
+            const select = document.getElementById('filtro-endereco');
+            select.innerHTML = '<option value="">Todos</option>';
+            
+            data.enderecos.forEach(end => {
+                const option = document.createElement('option');
+                option.value = end.id;
+                option.textContent = end.descricao;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Erro ao carregar endereços:', error);
+    }
+}
+
+function aplicarFiltros() {
+    filtroMes = document.getElementById('filtro-mes').value;
+    filtroEndereco = document.getElementById('filtro-endereco').value;
+    
+    carregarAtendimentos();
+    if (filtroMes) {
+        carregarEstatisticas();
+    } else {
+        document.getElementById('stats-por-endereco').style.display = 'none';
+    }
+}
+
+async function carregarEstatisticas() {
+    if (!filtroMes) return;
+    
+    try {
+        const response = await fetch(`/api/atendimentos/estatisticas?mes=${filtroMes}`);
+        const data = await response.json();
+        
+        if (data.success && data.por_endereco.length > 0) {
+            const container = document.getElementById('lista-stats-endereco');
+            container.innerHTML = '';
+            
+            data.por_endereco.forEach(stat => {
+                const div = document.createElement('div');
+                div.className = 'endereco-stat';
+                div.innerHTML = `
+                    <div>
+                        <div class="endereco-nome">${stat.cliente}</div>
+                        <div style="font-size: 12px; color: #999;">${stat.endereco}</div>
+                    </div>
+                    <div class="endereco-total">${stat.total} atendimento(s)</div>
+                `;
+                container.appendChild(div);
+            });
+            
+            document.getElementById('stats-por-endereco').style.display = 'block';
+        } else {
+            document.getElementById('stats-por-endereco').style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Erro ao carregar estatísticas:', error);
+    }
+}
+
+async function carregarAtendimentos() {
+    const loading = document.getElementById('loading');
+    const content = document.getElementById('content');
+    const tbody = document.getElementById('tbody-atendimentos');
+    const emptyState = document.getElementById('empty-state');
+    
+    loading.style.display = 'block';
+    content.style.display = 'none';
+    
+    try {
+        let url = '/api/atendimentos?';
+        if (filtroMes) url += `mes=${filtroMes}&`;
+        if (filtroEndereco) url += `endereco_id=${filtroEndereco}&`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        tbody.innerHTML = '';
+        
+        document.getElementById('total-atendimentos').textContent = data.atendimentos.length;
+        
+        if (data.atendimentos.length === 0) {
+            emptyState.style.display = 'block';
+        } else {
+            emptyState.style.display = 'none';
+            
+            data.atendimentos.forEach(atend => {
+                const endereco = enderecos.find(e => e.id === atend.endereco_id);
+                const enderecoDesc = endereco ? endereco.descricao : 'N/A';
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${atend.data_atendimento}</strong></td>
+                    <td>${enderecoDesc}</td>
+                    <td>${atend.funcionario_nome}</td>
+                    <td>${atend.hora_chegada}</td>
+                    <td>${atend.hora_inicio} - ${atend.hora_fim}</td>
+                    <td><strong>${atend.tempo_atendimento} min</strong></td>
+                    <td>${atend.tempo_deslocamento} min</td>
+                    <td>
+                        <div class="historico-preview" title="${atend.historico}">
+                            ${atend.historico}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-icon btn-edit" onclick="editar(${atend.id})" title="Editar">
+                                ✏️
+                            </button>
+                            <button class="btn-icon btn-delete" onclick="excluir(${atend.id}, '${atend.data_atendimento}')" title="Excluir">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        loading.style.display = 'none';
+        content.style.display = 'block';
+    } catch (error) {
+        console.error('Erro ao carregar atendimentos:', error);
+        loading.style.display = 'none';
+        alert('Erro ao carregar atendimentos');
+    }
+}
+
+function editar(id) {
+    window.location.href = `/atendimentos/${id}/editar`;
+}
+
+async function excluir(id, data) {
+    if (!confirm(`Deseja realmente excluir o atendimento do dia ${data}?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/atendimentos/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message);
+            carregarAtendimentos();
+            if (filtroMes) carregarEstatisticas();
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Erro ao excluir atendimento:', error);
+        alert('Erro ao excluir atendimento');
+    }
+}
+
+// Definir mês atual como padrão
+document.addEventListener('DOMContentLoaded', async () => {
+    const hoje = new Date();
+    const mesAtual = hoje.toISOString().slice(0, 7);
+    document.getElementById('filtro-mes').value = mesAtual;
+    filtroMes = mesAtual;
+    
+    await carregarEnderecos();
+    await carregarAtendimentos();
+    await carregarEstatisticas();
+});
+{% endblock %}

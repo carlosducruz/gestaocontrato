@@ -1,0 +1,257 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}{{ 'Editar' if cliente else 'Novo' }} Cliente{% endblock %}
+
+{% block page_title %}{{ 'Editar' if cliente else 'Novo' }} Cliente{% endblock %}
+
+{% block page_styles %}
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #667eea;
+    text-decoration: none;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.form-card {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    max-width: 600px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #555;
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.checkbox-group label {
+    margin: 0;
+    cursor: pointer;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 30px;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.alert {
+    padding: 12px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    display: none;
+}
+
+.alert-error {
+    background: #fee;
+    color: #c33;
+    border: 1px solid #fcc;
+}
+
+.alert-success {
+    background: #efe;
+    color: #3c3;
+    border: 1px solid #cfc;
+}
+{% endblock %}
+
+{% block page_content %}
+<a href="/clientes" class="back-link">← Voltar para lista</a>
+
+<div class="form-card">
+    <div id="alert" class="alert"></div>
+    
+    <form id="clienteForm">
+        <div class="form-group">
+            <label for="nome">Nome / Razão Social *</label>
+            <input type="text" id="nome" name="nome" required 
+                   value="{{ cliente.nome if cliente else '' }}">
+        </div>
+        
+        <div class="form-group">
+            <label for="cnpj">CNPJ *</label>
+            <input type="text" id="cnpj" name="cnpj" required maxlength="18"
+                   placeholder="00.000.000/0000-00"
+                   value="{{ cliente.cnpj if cliente else '' }}">
+        </div>
+        
+        <div class="form-group">
+            <label for="nr_atendimentos">Número de Atendimentos</label>
+            <input type="number" id="nr_atendimentos" name="nr_atendimentos" min="0"
+                   value="{{ cliente.nr_atendimentos if cliente else 0 }}">
+        </div>
+        
+        {% if cliente %}
+        <div class="checkbox-group">
+            <input type="checkbox" id="ativo" {% if cliente.ativo %}checked{% endif %}>
+            <label for="ativo">Cliente Ativo</label>
+        </div>
+        {% endif %}
+        
+        <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="window.location.href='/clientes'">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+                {{ 'Atualizar' if cliente else 'Cadastrar' }}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+const clienteId = {{ cliente.id if cliente else 'null' }};
+</script>
+{% endblock %}
+
+{% block page_scripts %}
+// Máscara CNPJ
+document.getElementById('cnpj').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 14) {
+        value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+        value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+        value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+        value = value.replace(/(\d{4})(\d)/, '$1-$2');
+    }
+    e.target.value = value;
+});
+
+function showAlert(message, type) {
+    const alert = document.getElementById('alert');
+    alert.textContent = message;
+    alert.className = `alert alert-${type}`;
+    alert.style.display = 'block';
+    setTimeout(() => {
+        alert.style.display = 'none';
+    }, 5000);
+}
+
+document.getElementById('clienteForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Salvando...';
+    
+    const formData = {
+        nome: document.getElementById('nome').value,
+        cnpj: document.getElementById('cnpj').value,
+        nr_atendimentos: parseInt(document.getElementById('nr_atendimentos').value) || 0
+    };
+    
+    if (clienteId) {
+        const ativoCheckbox = document.getElementById('ativo');
+        formData.ativo = ativoCheckbox.checked;
+        formData.data_ativacao = new Date().toISOString().split('T')[0];
+    } else {
+        formData.ativo = true;
+        formData.data_ativacao = new Date().toISOString().split('T')[0];
+    }
+    
+    try {
+        const url = clienteId ? `/api/clientes/${clienteId}` : '/api/clientes';
+        const method = clienteId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert(data.message, 'success');
+            setTimeout(() => {
+                window.location.href = '/clientes';
+            }, 1500);
+        } else {
+            showAlert(data.message, 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    } catch (error) {
+        console.error('Erro ao salvar cliente:', error);
+        showAlert('Erro ao salvar cliente', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+});
+{% endblock %}

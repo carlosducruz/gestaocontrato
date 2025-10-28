@@ -1,0 +1,687 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Ocorrências Disciplinares - {{ funcionario.nome }}{% endblock %}
+
+{% block page_title %}Ocorrências Disciplinares{% endblock %}
+
+{% block page_styles %}
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #667eea;
+    text-decoration: none;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.info-card {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-label {
+    color: #7f8c8d;
+    font-size: 13px;
+    margin-bottom: 5px;
+}
+
+.info-value {
+    color: #2c3e50;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.ultima-ocorrencia {
+    background: #fff3cd;
+    padding: 15px;
+    border-radius: 5px;
+    border-left: 4px solid #e67e22;
+    margin-top: 15px;
+}
+
+.ultima-ocorrencia h4 {
+    color: #856404;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.ultima-info {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.ultima-info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.toolbar {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+}
+
+.table-container {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    background: #f8f9fa;
+}
+
+th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 2px solid #dee2e6;
+}
+
+td {
+    padding: 15px;
+    border-bottom: 1px solid #dee2e6;
+    color: #555;
+}
+
+tr:hover {
+    background: #f8f9fa;
+}
+
+.badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.badge-danger {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-icon {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s;
+}
+
+.btn-edit {
+    background: #3498db;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #2980b9;
+}
+
+.btn-delete {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #c0392b;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-header h2 {
+    color: #2c3e50;
+    font-size: 20px;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #555;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.motivo-outros-section {
+    display: none;
+    margin-top: 10px;
+}
+
+.motivo-outros-section.show {
+    display: block;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.alert {
+    padding: 12px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    display: none;
+}
+
+.alert-error {
+    background: #fee;
+    color: #c33;
+    border: 1px solid #fcc;
+}
+
+.alert-success {
+    background: #efe;
+    color: #3c3;
+    border: 1px solid #cfc;
+}
+{% endblock %}
+
+{% block page_content %}
+<a href="/funcionarios" class="back-link">← Voltar para lista</a>
+
+<div class="info-card">
+    <h3 style="margin-bottom: 20px; color: #2c3e50;">Informações do Funcionário</h3>
+    <div class="info-grid">
+        <div class="info-item">
+            <div class="info-label">Nome</div>
+            <div class="info-value">{{ funcionario.nome }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">RE</div>
+            <div class="info-value">{{ funcionario.re }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Total de Ocorrências</div>
+            <div class="info-value" id="total-ocorrencias">0</div>
+        </div>
+    </div>
+    
+    <div id="ultima-ocorrencia-container"></div>
+</div>
+
+<div class="toolbar">
+    <h3 style="color: #2c3e50;">Registro de Ocorrências Disciplinares</h3>
+    <button class="btn-primary" onclick="abrirModal()">+ Registrar Ocorrência</button>
+</div>
+
+<div id="alert" class="alert"></div>
+
+<div class="table-container">
+    <div id="loading" style="text-align: center; padding: 40px; color: #999;">Carregando...</div>
+    <div id="content" style="display: none;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Tipo</th>
+                    <th>Motivo</th>
+                    <th>Descrição</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-ocorrencias">
+            </tbody>
+        </table>
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <p>Nenhuma ocorrência disciplinar registrada</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modal-title">Registrar Ocorrência Disciplinar</h2>
+            <button class="close-modal" onclick="fecharModal()">×</button>
+        </div>
+        
+        <form id="ocorrenciaForm">
+            <input type="hidden" id="ocorrencia_id">
+            
+            <div class="form-group">
+                <label for="data_ocorrencia">Data da Ocorrência *</label>
+                <input type="date" id="data_ocorrencia" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="tipo">Tipo *</label>
+                <select id="tipo" required>
+                    <option value="">Selecione...</option>
+                    <option value="Advertência">Advertência</option>
+                    <option value="Suspensão de 1 dia">Suspensão de 1 dia</option>
+                    <option value="Suspensão de 3 dias">Suspensão de 3 dias</option>
+                    <option value="Suspensão de 5 dias">Suspensão de 5 dias</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="motivo">Motivo *</label>
+                <select id="motivo" required onchange="toggleMotivoOutros()">
+                    <option value="">Selecione...</option>
+                    <option value="Faltas">Faltas</option>
+                    <option value="Procedimento">Procedimento</option>
+                    <option value="Desinteligência">Desinteligência</option>
+                    <option value="Outros">Outros</option>
+                </select>
+            </div>
+            
+            <div id="motivo-outros-section" class="motivo-outros-section">
+                <div class="form-group">
+                    <label for="motivo_detalhado">Especifique o motivo *</label>
+                    <textarea id="motivo_detalhado" rows="2" placeholder="Descreva o motivo..."></textarea>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="descricao">Descrição Detalhada</label>
+                <textarea id="descricao" rows="4" placeholder="Descreva os detalhes da ocorrência..."></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="submitBtn">Registrar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const funcionarioId = {{ funcionario.id }};
+let modoEdicao = false;
+</script>
+{% endblock %}
+
+{% block page_scripts %}
+function showAlert(message, type) {
+    const alert = document.getElementById('alert');
+    alert.textContent = message;
+    alert.className = `alert alert-${type}`;
+    alert.style.display = 'block';
+    setTimeout(() => {
+        alert.style.display = 'none';
+    }, 5000);
+}
+
+function toggleMotivoOutros() {
+    const motivo = document.getElementById('motivo').value;
+    const section = document.getElementById('motivo-outros-section');
+    const textarea = document.getElementById('motivo_detalhado');
+    
+    if (motivo === 'Outros') {
+        section.classList.add('show');
+        textarea.required = true;
+    } else {
+        section.classList.remove('show');
+        textarea.required = false;
+        textarea.value = '';
+    }
+}
+
+function abrirModal(ocorrencia = null) {
+    modoEdicao = ocorrencia !== null;
+    document.getElementById('modal-title').textContent = modoEdicao ? 'Editar Ocorrência Disciplinar' : 'Registrar Ocorrência Disciplinar';
+    document.getElementById('submitBtn').textContent = modoEdicao ? 'Atualizar' : 'Registrar';
+    
+    if (modoEdicao) {
+        document.getElementById('ocorrencia_id').value = ocorrencia.id;
+        document.getElementById('data_ocorrencia').value = ocorrencia.data_ocorrencia_iso;
+        document.getElementById('tipo').value = ocorrencia.tipo;
+        document.getElementById('motivo').value = ocorrencia.motivo;
+        document.getElementById('descricao').value = ocorrencia.descricao || '';
+        
+        if (ocorrencia.motivo === 'Outros') {
+            document.getElementById('motivo_detalhado').value = ocorrencia.motivo_detalhado || '';
+            toggleMotivoOutros();
+        }
+    } else {
+        document.getElementById('ocorrenciaForm').reset();
+        document.getElementById('ocorrencia_id').value = '';
+        document.getElementById('motivo-outros-section').classList.remove('show');
+    }
+    
+    document.getElementById('modal').classList.add('show');
+}
+
+function fecharModal() {
+    document.getElementById('modal').classList.remove('show');
+    document.getElementById('ocorrenciaForm').reset();
+    modoEdicao = false;
+}
+
+function getBadgeClass(tipo) {
+    if (tipo.includes('Suspensão')) {
+        return 'badge-danger';
+    }
+    return 'badge-warning';
+}
+
+async function carregarOcorrencias() {
+    const loading = document.getElementById('loading');
+    const content = document.getElementById('content');
+    const tbody = document.getElementById('tbody-ocorrencias');
+    const emptyState = document.getElementById('empty-state');
+    const ultimaContainer = document.getElementById('ultima-ocorrencia-container');
+    
+    loading.style.display = 'block';
+    content.style.display = 'none';
+    
+    try {
+        const response = await fetch(`/api/funcionarios/${funcionarioId}/ocorrencias`);
+        const data = await response.json();
+        
+        tbody.innerHTML = '';
+        
+        document.getElementById('total-ocorrencias').textContent = data.total_ocorrencias;
+        
+        // Exibir última ocorrência
+        if (data.ultima_ocorrencia) {
+            const ultima = data.ultima_ocorrencia;
+            const motivoExibir = ultima.motivo === 'Outros' ? ultima.motivo_detalhado : ultima.motivo;
+            
+            ultimaContainer.innerHTML = `
+                <div class="ultima-ocorrencia">
+                    <h4>Última Ocorrência</h4>
+                    <div class="ultima-info">
+                        <div class="ultima-info-item">
+                            <span class="info-label">Data</span>
+                            <strong>${ultima.data_ocorrencia}</strong>
+                        </div>
+                        <div class="ultima-info-item">
+                            <span class="info-label">Tipo</span>
+                            <strong>${ultima.tipo}</strong>
+                        </div>
+                        <div class="ultima-info-item">
+                            <span class="info-label">Motivo</span>
+                            <strong>${motivoExibir}</strong>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else {
+            ultimaContainer.innerHTML = '';
+        }
+        
+        if (data.ocorrencias.length === 0) {
+            emptyState.style.display = 'block';
+        } else {
+            emptyState.style.display = 'none';
+            
+            data.ocorrencias.forEach(ocorrencia => {
+                const motivoExibir = ocorrencia.motivo === 'Outros' ? ocorrencia.motivo_detalhado : ocorrencia.motivo;
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${ocorrencia.data_ocorrencia}</strong></td>
+                    <td>
+                        <span class="badge ${getBadgeClass(ocorrencia.tipo)}">
+                            ${ocorrencia.tipo}
+                        </span>
+                    </td>
+                    <td>${motivoExibir}</td>
+                    <td>${ocorrencia.descricao || '-'}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-icon btn-edit" onclick='editarOcorrencia(${JSON.stringify(ocorrencia)})' title="Editar">
+                                ✏️
+                            </button>
+                            <button class="btn-icon btn-delete" onclick="excluirOcorrencia(${ocorrencia.id}, '${ocorrencia.data_ocorrencia}')" title="Excluir">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        loading.style.display = 'none';
+        content.style.display = 'block';
+    } catch (error) {
+        console.error('Erro ao carregar ocorrências:', error);
+        loading.style.display = 'none';
+        alert('Erro ao carregar ocorrências disciplinares');
+    }
+}
+
+function editarOcorrencia(ocorrencia) {
+    abrirModal(ocorrencia);
+}
+
+async function excluirOcorrencia(id, data) {
+    if (!confirm(`Deseja realmente excluir a ocorrência do dia ${data}?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/funcionarios/${funcionarioId}/ocorrencias/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert(data.message, 'success');
+            carregarOcorrencias();
+        } else {
+            showAlert('Erro: ' + data.message, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao excluir ocorrência:', error);
+        showAlert('Erro ao excluir ocorrência disciplinar', 'error');
+    }
+}
+
+document.getElementById('ocorrenciaForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Salvando...';
+    
+    const ocorrenciaId = document.getElementById('ocorrencia_id').value;
+    const motivo = document.getElementById('motivo').value;
+    
+    const formData = {
+        data_ocorrencia: document.getElementById('data_ocorrencia').value,
+        tipo: document.getElementById('tipo').value,
+        motivo: motivo,
+        descricao: document.getElementById('descricao').value
+    };
+    
+    // Se motivo for "Outros", incluir motivo_detalhado
+    if (motivo === 'Outros') {
+        const motivoDetalhado = document.getElementById('motivo_detalhado').value;
+        if (!motivoDetalhado.trim()) {
+            showAlert('Especifique o motivo', 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            return;
+        }
+        formData.motivo_detalhado = motivoDetalhado;
+    }
+    
+    try {
+        let url = `/api/funcionarios/${funcionarioId}/ocorrencias`;
+        let method = 'POST';
+        
+        if (modoEdicao && ocorrenciaId) {
+            url = `/api/funcionarios/${funcionarioId}/ocorrencias/${ocorrenciaId}`;
+            method = 'PUT';
+        }
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert(data.message, 'success');
+            fecharModal();
+            carregarOcorrencias();
+        } else {
+            showAlert(data.message, 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    } catch (error) {
+        console.error('Erro ao salvar ocorrência:', error);
+        showAlert('Erro ao salvar ocorrência disciplinar', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+});
+
+// Fechar modal ao clicar fora
+document.getElementById('modal').addEventListener('click', (e) => {
+    if (e.target.id === 'modal') {
+        fecharModal();
+    }
+});
+
+// Carregar ao iniciar
+document.addEventListener('DOMContentLoaded', carregarOcorrencias);
+{% endblock %}

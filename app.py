@@ -47,6 +47,7 @@ class Funcionario(db.Model):
     evolucoes = db.relationship('EvolucaoSalarial', backref='funcionario', lazy=True, cascade='all, delete-orphan')
     faltas = db.relationship('Falta', backref='funcionario', lazy=True, cascade='all, delete-orphan')
     folgas_trabalhadas = db.relationship('FolgaTrabalhada', foreign_keys='FolgaTrabalhada.funcionario_id', backref='funcionario', lazy=True, cascade='all, delete-orphan')
+    ocorrencias = db.relationship('OcorrenciaDisciplinar', backref='funcionario', lazy=True, cascade='all, delete-orphan')
     
     def to_dict(self):
         tempo_empresa = self.calcular_tempo_empresa()
@@ -143,6 +144,178 @@ class FolgaTrabalhada(db.Model):
             'observacao': self.observacao
         }
 
+class OcorrenciaDisciplinar(db.Model):
+    __tablename__ = 'ocorrencias_disciplinares'
+    id = db.Column(db.Integer, primary_key=True)
+    funcionario_id = db.Column(db.Integer, db.ForeignKey('funcionarios.id'), nullable=False)
+    data_ocorrencia = db.Column(db.Date, nullable=False)
+    tipo = db.Column(db.String(50), nullable=False)  # Advertência, Suspensão 1/3/5 dias
+    motivo = db.Column(db.String(100), nullable=False)  # Faltas, Procedimento, Desinteligência, Outros
+    motivo_detalhado = db.Column(db.Text, nullable=True)  # Para quando motivo = Outros
+    descricao = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'funcionario_id': self.funcionario_id,
+            'data_ocorrencia': self.data_ocorrencia.strftime('%d/%m/%Y'),
+            'data_ocorrencia_iso': self.data_ocorrencia.strftime('%Y-%m-%d'),
+            'tipo': self.tipo,
+            'motivo': self.motivo,
+            'motivo_detalhado': self.motivo_detalhado,
+            'descricao': self.descricao
+        }
+
+class Cliente(db.Model):
+    __tablename__ = 'clientes'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(200), nullable=False)
+    cnpj = db.Column(db.String(18), unique=True, nullable=False)
+    ativo = db.Column(db.Boolean, default=True)
+    data_ativacao = db.Column(db.Date, nullable=True)
+    data_inativacao = db.Column(db.Date, nullable=True)
+    nr_atendimentos = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relacionamento com endereços
+    enderecos = db.relationship('Endereco', backref='cliente', lazy=True, cascade='all, delete-orphan')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'nome': self.nome,
+            'cnpj': self.cnpj,
+            'ativo': self.ativo,
+            'data_ativacao': self.data_ativacao.strftime('%d/%m/%Y') if self.data_ativacao else None,
+            'data_inativacao': self.data_inativacao.strftime('%d/%m/%Y') if self.data_inativacao else None,
+            'nr_atendimentos': self.nr_atendimentos,
+            'total_enderecos': len(self.enderecos),
+            'enderecos_ativos': sum(1 for e in self.enderecos if e.ativo)
+        }
+
+
+class Endereco(db.Model):
+    __tablename__ = 'enderecos'
+    id = db.Column(db.Integer, primary_key=True)
+    cliente_id = db.Column(db.Integer, db.ForeignKey('clientes.id'), nullable=False)
+    nr_contrato = db.Column(db.String(50), nullable=False)
+    data_ativacao_contrato = db.Column(db.Date, nullable=False)
+    data_validade_contrato = db.Column(db.Date, nullable=False)
+    
+    # Endereço
+    logradouro = db.Column(db.String(200), nullable=False)
+    numero = db.Column(db.String(20), nullable=False)
+    bairro = db.Column(db.String(100), nullable=False)
+    cep = db.Column(db.String(10), nullable=False)
+    cidade = db.Column(db.String(100), nullable=False)
+    estado = db.Column(db.String(2), nullable=False)
+    
+    # Tipo de endereço
+    tipo_endereco = db.Column(db.String(20), default='Condomínio')  # Unidade ou Condomínio
+    
+    # Campos específicos para Condomínio
+    portaria_remota = db.Column(db.Boolean, default=False)
+    monitoramento = db.Column(db.Boolean, default=False)
+    nr_apartamentos = db.Column(db.Integer, nullable=True)
+    
+    # Internet
+    tipo_internet = db.Column(db.String(20), default='Nenhuma')
+    fornecedor_internet = db.Column(db.String(100), nullable=True)
+    
+    # Equipamentos
+    tipo_nobreak = db.Column(db.String(50), nullable=False)
+    tipo_gravacao = db.Column(db.String(20), nullable=False)
+    tipo_manutencao = db.Column(db.String(20), nullable=False)
+    
+    # Contrato
+    valor_contrato = db.Column(db.Numeric(10, 2), nullable=False)
+    percentual_reajuste = db.Column(db.Numeric(5, 2), nullable=False)
+    periodo_atendimento = db.Column(db.String(50), nullable=False)
+    periodo_atendimento_personalizado = db.Column(db.String(100), nullable=True)
+    locacao_sistema = db.Column(db.Boolean, default=False)
+    
+    ativo = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relacionamento com atendimentos
+    atendimentos = db.relationship('Atendimento', backref='endereco', lazy=True, cascade='all, delete-orphan')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'cliente_id': self.cliente_id,
+            'nr_contrato': self.nr_contrato,
+            'data_ativacao_contrato': self.data_ativacao_contrato.strftime('%d/%m/%Y'),
+            'data_validade_contrato': self.data_validade_contrato.strftime('%d/%m/%Y'),
+            'logradouro': self.logradouro,
+            'numero': self.numero,
+            'bairro': self.bairro,
+            'cep': self.cep,
+            'cidade': self.cidade,
+            'estado': self.estado,
+            'tipo_endereco': self.tipo_endereco,
+            'portaria_remota': self.portaria_remota,
+            'monitoramento': self.monitoramento,
+            'nr_apartamentos': self.nr_apartamentos,
+            'tipo_internet': self.tipo_internet,
+            'fornecedor_internet': self.fornecedor_internet,
+            'tipo_nobreak': self.tipo_nobreak,
+            'tipo_gravacao': self.tipo_gravacao,
+            'tipo_manutencao': self.tipo_manutencao,
+            'valor_contrato': float(self.valor_contrato),
+            'percentual_reajuste': float(self.percentual_reajuste),
+            'periodo_atendimento': self.periodo_atendimento,
+            'periodo_atendimento_personalizado': self.periodo_atendimento_personalizado,
+            'locacao_sistema': self.locacao_sistema,
+            'ativo': self.ativo,
+            'endereco_completo': f"{self.logradouro}, {self.numero} - {self.bairro}, {self.cidade}/{self.estado}"
+        }
+
+class Atendimento(db.Model):
+    __tablename__ = 'atendimentos'
+    id = db.Column(db.Integer, primary_key=True)
+    endereco_id = db.Column(db.Integer, db.ForeignKey('enderecos.id'), nullable=False)
+    funcionario_id = db.Column(db.Integer, db.ForeignKey('funcionarios.id'), nullable=False)
+    data_atendimento = db.Column(db.Date, nullable=False)
+    hora_chegada = db.Column(db.Time, nullable=False)
+    hora_inicio = db.Column(db.Time, nullable=False)
+    hora_fim = db.Column(db.Time, nullable=False)
+    tempo_deslocamento = db.Column(db.Integer, nullable=False)  # em minutos
+    historico = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relacionamento com funcionário
+    funcionario = db.relationship('Funcionario', foreign_keys=[funcionario_id])
+    
+    def calcular_tempo_atendimento(self):
+        # Calcula tempo em minutos
+        inicio = datetime.combine(datetime.today(), self.hora_inicio)
+        fim = datetime.combine(datetime.today(), self.hora_fim)
+        delta = fim - inicio
+        return int(delta.total_seconds() / 60)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'endereco_id': self.endereco_id,
+            'funcionario_id': self.funcionario_id,
+            'funcionario_nome': self.funcionario.nome if self.funcionario else None,
+            'data_atendimento': self.data_atendimento.strftime('%d/%m/%Y'),
+            'data_atendimento_iso': self.data_atendimento.strftime('%Y-%m-%d'),
+            'hora_chegada': self.hora_chegada.strftime('%H:%M'),
+            'hora_inicio': self.hora_inicio.strftime('%H:%M'),
+            'hora_fim': self.hora_fim.strftime('%H:%M'),
+            'tempo_deslocamento': self.tempo_deslocamento,
+            'tempo_atendimento': self.calcular_tempo_atendimento(),
+            'historico': self.historico,
+            'mes_ano': self.data_atendimento.strftime('%m/%Y')
+        }
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -214,6 +387,50 @@ def funcionarios_faltas(id):
 def funcionarios_folgas(id):
     funcionario = Funcionario.query.get_or_404(id)
     return render_template('funcionarios_folgas.html', user=current_user, funcionario=funcionario)
+
+@app.route('/funcionarios/<int:id>/ocorrencias')
+@login_required
+def funcionarios_ocorrencias(id):
+    funcionario = Funcionario.query.get_or_404(id)
+    return render_template('funcionarios_ocorrencias.html', user=current_user, funcionario=funcionario)
+
+@app.route('/clientes')
+@login_required
+def clientes():
+    return render_template('clientes.html', user=current_user)
+
+@app.route('/clientes/novo')
+@login_required
+def clientes_novo():
+    return render_template('clientes_form.html', user=current_user, cliente=None)
+
+@app.route('/clientes/<int:id>/editar')
+@login_required
+def clientes_editar(id):
+    cliente = Cliente.query.get_or_404(id)
+    return render_template('clientes_form.html', user=current_user, cliente=cliente)
+
+@app.route('/clientes/<int:id>/enderecos')
+@login_required
+def clientes_enderecos(id):
+    cliente = Cliente.query.get_or_404(id)
+    return render_template('clientes_enderecos.html', user=current_user, cliente=cliente)
+
+@app.route('/atendimentos')
+@login_required
+def atendimentos():
+    return render_template('atendimentos.html', user=current_user)
+
+@app.route('/atendimentos/novo')
+@login_required
+def atendimentos_novo():
+    return render_template('atendimentos_form.html', user=current_user, atendimento=None)
+
+@app.route('/atendimentos/<int:id>/editar')
+@login_required
+def atendimentos_editar(id):
+    atendimento = Atendimento.query.get_or_404(id)
+    return render_template('atendimentos_form.html', user=current_user, atendimento=atendimento)
 
 # API Routes - Autenticação
 @app.route('/api/login', methods=['POST'])
@@ -590,6 +807,520 @@ def api_folgas_deletar(funcionario_id, folga_id):
         db.session.delete(folga)
         db.session.commit()
         return jsonify({'success': True, 'message': 'Folga trabalhada excluída com sucesso'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# API Routes - Ocorrências Disciplinares
+@app.route('/api/funcionarios/<int:id>/ocorrencias', methods=['GET'])
+@login_required
+def api_ocorrencias_listar(id):
+    funcionario = Funcionario.query.get_or_404(id)
+    ocorrencias = OcorrenciaDisciplinar.query.filter_by(funcionario_id=id).order_by(OcorrenciaDisciplinar.data_ocorrencia.desc()).all()
+    
+    # Buscar última ocorrência
+    ultima_ocorrencia = ocorrencias[0] if ocorrencias else None
+    
+    return jsonify({
+        'success': True,
+        'funcionario': funcionario.to_dict(),
+        'ocorrencias': [o.to_dict() for o in ocorrencias],
+        'total_ocorrencias': len(ocorrencias),
+        'ultima_ocorrencia': ultima_ocorrencia.to_dict() if ultima_ocorrencia else None
+    })
+
+@app.route('/api/funcionarios/<int:id>/ocorrencias', methods=['POST'])
+@login_required
+def api_ocorrencias_criar(id):
+    funcionario = Funcionario.query.get_or_404(id)
+    data = request.get_json()
+    
+    try:
+        # Se motivo for "Outros", usar o motivo_detalhado
+        motivo = data['motivo']
+        motivo_detalhado = None
+        
+        if motivo == 'Outros':
+            motivo_detalhado = data.get('motivo_detalhado')
+        
+        ocorrencia = OcorrenciaDisciplinar(
+            funcionario_id=id,
+            data_ocorrencia=datetime.strptime(data['data_ocorrencia'], '%Y-%m-%d').date(),
+            tipo=data['tipo'],
+            motivo=motivo,
+            motivo_detalhado=motivo_detalhado,
+            descricao=data.get('descricao')
+        )
+        
+        db.session.add(ocorrencia)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Ocorrência disciplinar registrada com sucesso',
+            'ocorrencia': ocorrencia.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/funcionarios/<int:funcionario_id>/ocorrencias/<int:ocorrencia_id>', methods=['PUT'])
+@login_required
+def api_ocorrencias_atualizar(funcionario_id, ocorrencia_id):
+    ocorrencia = OcorrenciaDisciplinar.query.filter_by(id=ocorrencia_id, funcionario_id=funcionario_id).first_or_404()
+    data = request.get_json()
+    
+    try:
+        ocorrencia.data_ocorrencia = datetime.strptime(data['data_ocorrencia'], '%Y-%m-%d').date()
+        ocorrencia.tipo = data['tipo']
+        ocorrencia.motivo = data['motivo']
+        
+        if data['motivo'] == 'Outros':
+            ocorrencia.motivo_detalhado = data.get('motivo_detalhado')
+        else:
+            ocorrencia.motivo_detalhado = None
+            
+        ocorrencia.descricao = data.get('descricao')
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Ocorrência disciplinar atualizada com sucesso',
+            'ocorrencia': ocorrencia.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/funcionarios/<int:funcionario_id>/ocorrencias/<int:ocorrencia_id>', methods=['DELETE'])
+@login_required
+def api_ocorrencias_deletar(funcionario_id, ocorrencia_id):
+    ocorrencia = OcorrenciaDisciplinar.query.filter_by(id=ocorrencia_id, funcionario_id=funcionario_id).first_or_404()
+    
+    try:
+        db.session.delete(ocorrencia)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Ocorrência disciplinar excluída com sucesso'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# API Routes - Clientes
+@app.route('/api/clientes', methods=['GET'])
+@login_required
+def api_clientes_listar():
+    filtro = request.args.get('filtro', 'todos')
+    
+    query = Cliente.query
+    
+    if filtro == 'ativos':
+        query = query.filter_by(ativo=True)
+    elif filtro == 'inativos':
+        query = query.filter_by(ativo=False)
+    # Filtros por portaria remota
+    elif filtro == 'com_portaria':
+        # Filtra clientes que possuem pelo menos um endereço ativo com portaria_remota=True
+        clientes_ids = [c.id for c in Cliente.query.all() if any(e.portaria_remota and e.ativo for e in c.enderecos)]
+        query = query.filter(Cliente.id.in_(clientes_ids))
+    elif filtro == 'sem_portaria':
+        # Filtra clientes que não possuem nenhum endereço ativo com portaria_remota=True
+        clientes_ids = [c.id for c in Cliente.query.all() if not any(e.portaria_remota and e.ativo for e in c.enderecos)]
+        query = query.filter(Cliente.id.in_(clientes_ids))
+    
+    clientes = query.order_by(Cliente.nome).all()
+    clientes_json = []
+    from datetime import datetime
+    mes_atual = datetime.now().month
+    ano_atual = datetime.now().year
+    for c in clientes:
+        # Verifica se algum endereço do cliente tem portaria_remota=True
+        tem_portaria_remota = any(e.portaria_remota for e in c.enderecos if e.ativo)
+        cliente_dict = c.to_dict()
+        cliente_dict['tem_portaria_remota'] = tem_portaria_remota
+        # Somatória e média dos atendimentos do mês para endereços ativos do cliente
+        total_atendimentos_mes = 0
+        tempos_atendimento = []
+        for e in c.enderecos:
+            if e.ativo:
+                atendimentos = Atendimento.query.filter(
+                    Atendimento.endereco_id == e.id,
+                    db.extract('month', Atendimento.data_atendimento) == mes_atual,
+                    db.extract('year', Atendimento.data_atendimento) == ano_atual
+                ).all()
+                total_atendimentos_mes += len(atendimentos)
+                for a in atendimentos:
+                    tempos_atendimento.append(a.calcular_tempo_atendimento())
+        cliente_dict['atendimentos_mes'] = total_atendimentos_mes
+        if tempos_atendimento:
+            cliente_dict['media_tempo_atendimento_mes'] = round(sum(tempos_atendimento) / len(tempos_atendimento), 1)
+        else:
+            cliente_dict['media_tempo_atendimento_mes'] = 0
+        clientes_json.append(cliente_dict)
+    return jsonify({
+        'success': True,
+        'clientes': clientes_json
+    })
+
+@app.route('/api/clientes/<int:id>', methods=['GET'])
+@login_required
+def api_clientes_obter(id):
+    cliente = Cliente.query.get_or_404(id)
+    return jsonify({
+        'success': True,
+        'cliente': cliente.to_dict()
+    })
+
+@app.route('/api/clientes', methods=['POST'])
+@login_required
+def api_clientes_criar():
+    data = request.get_json()
+    
+    try:
+        if Cliente.query.filter_by(cnpj=data['cnpj']).first():
+            return jsonify({'success': False, 'message': 'CNPJ já cadastrado'}), 400
+        
+        cliente = Cliente(
+            nome=data['nome'],
+            cnpj=data['cnpj'],
+            ativo=data.get('ativo', True),
+            data_ativacao=datetime.strptime(data['data_ativacao'], '%Y-%m-%d').date() if data.get('data_ativacao') else None,
+            nr_atendimentos=data.get('nr_atendimentos', 0)
+        )
+        
+        db.session.add(cliente)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Cliente cadastrado com sucesso',
+            'cliente': cliente.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/clientes/<int:id>', methods=['PUT'])
+@login_required
+def api_clientes_atualizar(id):
+    cliente = Cliente.query.get_or_404(id)
+    data = request.get_json()
+    
+    try:
+        if data.get('cnpj') and data['cnpj'] != cliente.cnpj:
+            if Cliente.query.filter_by(cnpj=data['cnpj']).first():
+                return jsonify({'success': False, 'message': 'CNPJ já cadastrado'}), 400
+        
+        cliente.nome = data.get('nome', cliente.nome)
+        cliente.cnpj = data.get('cnpj', cliente.cnpj)
+        
+        ativo_anterior = cliente.ativo
+        cliente.ativo = data.get('ativo', cliente.ativo)
+        
+        # Gerenciar datas de ativação/inativação
+        if cliente.ativo and not ativo_anterior:
+            cliente.data_ativacao = datetime.now().date()
+            cliente.data_inativacao = None
+        elif not cliente.ativo and ativo_anterior:
+            cliente.data_inativacao = datetime.now().date()
+        
+        cliente.nr_atendimentos = data.get('nr_atendimentos', cliente.nr_atendimentos)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Cliente atualizado com sucesso',
+            'cliente': cliente.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/clientes/<int:id>', methods=['DELETE'])
+@login_required
+def api_clientes_deletar(id):
+    cliente = Cliente.query.get_or_404(id)
+    
+    try:
+        db.session.delete(cliente)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Cliente excluído com sucesso'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# API Routes - Endereços
+@app.route('/api/clientes/<int:cliente_id>/enderecos', methods=['GET'])
+@login_required
+def api_enderecos_listar(cliente_id):
+    cliente = Cliente.query.get_or_404(cliente_id)
+    filtro = request.args.get('filtro', 'todos')
+    
+    query = Endereco.query.filter_by(cliente_id=cliente_id)
+    
+    if filtro == 'ativos':
+        query = query.filter_by(ativo=True)
+    elif filtro == 'inativos':
+        query = query.filter_by(ativo=False)
+    
+    enderecos = query.order_by(Endereco.created_at.desc()).all()
+    
+    return jsonify({
+        'success': True,
+        'cliente': cliente.to_dict(),
+        'enderecos': [e.to_dict() for e in enderecos]
+    })
+
+@app.route('/api/clientes/<int:cliente_id>/enderecos', methods=['POST'])
+@login_required
+def api_enderecos_criar(cliente_id):
+    cliente = Cliente.query.get_or_404(cliente_id)
+    data = request.get_json()
+    
+    try:
+        endereco = Endereco(
+            cliente_id=cliente_id,
+            nr_contrato=data['nr_contrato'],
+            data_ativacao_contrato=datetime.strptime(data['data_ativacao_contrato'], '%Y-%m-%d').date(),
+            data_validade_contrato=datetime.strptime(data['data_validade_contrato'], '%Y-%m-%d').date(),
+            logradouro=data['logradouro'],
+            numero=data['numero'],
+            bairro=data['bairro'],
+            cep=data['cep'],
+            cidade=data['cidade'],
+            estado=data['estado'],
+            tipo_endereco=data['tipo_endereco'],
+            portaria_remota=data.get('portaria_remota', False),
+            monitoramento=data.get('monitoramento', False),
+            nr_apartamentos=data.get('nr_apartamentos'),
+            tipo_internet=data['tipo_internet'],
+            fornecedor_internet=data.get('fornecedor_internet'),
+            tipo_nobreak=data['tipo_nobreak'],
+            tipo_gravacao=data['tipo_gravacao'],
+            tipo_manutencao=data['tipo_manutencao'],
+            valor_contrato=data['valor_contrato'],
+            percentual_reajuste=data['percentual_reajuste'],
+            periodo_atendimento=data['periodo_atendimento'],
+            periodo_atendimento_personalizado=data.get('periodo_atendimento_personalizado'),
+            locacao_sistema=data.get('locacao_sistema', False),
+            ativo=data.get('ativo', True)
+        )
+        
+        db.session.add(endereco)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Endereço cadastrado com sucesso',
+            'endereco': endereco.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/clientes/<int:cliente_id>/enderecos/<int:endereco_id>', methods=['PUT'])
+@login_required
+def api_enderecos_atualizar(cliente_id, endereco_id):
+    endereco = Endereco.query.filter_by(id=endereco_id, cliente_id=cliente_id).first_or_404()
+    data = request.get_json()
+    
+    try:
+        endereco.nr_contrato = data.get('nr_contrato', endereco.nr_contrato)
+        endereco.data_ativacao_contrato = datetime.strptime(data['data_ativacao_contrato'], '%Y-%m-%d').date()
+        endereco.data_validade_contrato = datetime.strptime(data['data_validade_contrato'], '%Y-%m-%d').date()
+        endereco.logradouro = data.get('logradouro', endereco.logradouro)
+        endereco.numero = data.get('numero', endereco.numero)
+        endereco.bairro = data.get('bairro', endereco.bairro)
+        endereco.cep = data.get('cep', endereco.cep)
+        endereco.cidade = data.get('cidade', endereco.cidade)
+        endereco.estado = data.get('estado', endereco.estado)
+        endereco.tipo_endereco = data.get('tipo_endereco', endereco.tipo_endereco)
+        endereco.portaria_remota = data.get('portaria_remota', False)
+        endereco.monitoramento = data.get('monitoramento', False)
+        endereco.nr_apartamentos = data.get('nr_apartamentos')
+        endereco.tipo_internet = data.get('tipo_internet', endereco.tipo_internet)
+        endereco.fornecedor_internet = data.get('fornecedor_internet')
+        endereco.tipo_nobreak = data.get('tipo_nobreak', endereco.tipo_nobreak)
+        endereco.tipo_gravacao = data.get('tipo_gravacao', endereco.tipo_gravacao)
+        endereco.tipo_manutencao = data.get('tipo_manutencao', endereco.tipo_manutencao)
+        endereco.valor_contrato = data.get('valor_contrato', endereco.valor_contrato)
+        endereco.percentual_reajuste = data.get('percentual_reajuste', endereco.percentual_reajuste)
+        endereco.periodo_atendimento = data.get('periodo_atendimento', endereco.periodo_atendimento)
+        endereco.periodo_atendimento_personalizado = data.get('periodo_atendimento_personalizado')
+        endereco.locacao_sistema = data.get('locacao_sistema', False)
+        endereco.ativo = data.get('ativo', endereco.ativo)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Endereço atualizado com sucesso',
+            'endereco': endereco.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/clientes/<int:cliente_id>/enderecos/<int:endereco_id>', methods=['DELETE'])
+@login_required
+def api_enderecos_deletar(cliente_id, endereco_id):
+    endereco = Endereco.query.filter_by(id=endereco_id, cliente_id=cliente_id).first_or_404()
+    
+    try:
+        db.session.delete(endereco)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Endereço excluído com sucesso'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+# API Routes - Atendimentos
+@app.route('/api/atendimentos', methods=['GET'])
+@login_required
+def api_atendimentos_listar():
+    mes = request.args.get('mes')  # Formato: YYYY-MM
+    endereco_id = request.args.get('endereco_id')
+    
+    query = Atendimento.query
+    
+    if endereco_id:
+        query = query.filter_by(endereco_id=endereco_id)
+    
+    if mes:
+        ano, mes_num = mes.split('-')
+        query = query.filter(
+            db.extract('year', Atendimento.data_atendimento) == int(ano),
+            db.extract('month', Atendimento.data_atendimento) == int(mes_num)
+        )
+    
+    atendimentos = query.order_by(Atendimento.data_atendimento.desc(), Atendimento.hora_chegada.desc()).all()
+    
+    # Buscar endereços e funcionários para selects
+    enderecos = Endereco.query.filter_by(ativo=True).join(Cliente).order_by(Cliente.nome).all()
+    funcionarios = Funcionario.query.filter_by(ativo=True).order_by(Funcionario.nome).all()
+    
+    return jsonify({
+        'success': True,
+        'atendimentos': [a.to_dict() for a in atendimentos],
+        'enderecos': [{
+            'id': e.id,
+            'descricao': f"{e.cliente.nome} - {e.logradouro}, {e.numero} - {e.bairro}, {e.cidade}/{e.estado}",
+            'cliente_nome': e.cliente.nome
+        } for e in enderecos],
+        'funcionarios': [{'id': f.id, 'nome': f.nome, 're': f.re} for f in funcionarios]
+    })
+
+@app.route('/api/atendimentos/estatisticas', methods=['GET'])
+@login_required
+def api_atendimentos_estatisticas():
+    mes = request.args.get('mes')  # Formato: YYYY-MM
+    
+    query = Atendimento.query
+    
+    if mes:
+        ano, mes_num = mes.split('-')
+        query = query.filter(
+            db.extract('year', Atendimento.data_atendimento) == int(ano),
+            db.extract('month', Atendimento.data_atendimento) == int(mes_num)
+        )
+    
+    atendimentos = query.all()
+    
+    # Agrupar por endereço
+    por_endereco = {}
+    for atend in atendimentos:
+        end_id = atend.endereco_id
+        if end_id not in por_endereco:
+            por_endereco[end_id] = {
+                'endereco': atend.endereco.endereco_completo,
+                'cliente': atend.endereco.cliente.nome,
+                'total': 0,
+                'tempo_total': 0
+            }
+        por_endereco[end_id]['total'] += 1
+        por_endereco[end_id]['tempo_total'] += atend.calcular_tempo_atendimento()
+    
+    return jsonify({
+        'success': True,
+        'por_endereco': list(por_endereco.values()),
+        'total_geral': len(atendimentos)
+    })
+
+@app.route('/api/atendimentos/<int:id>', methods=['GET'])
+@login_required
+def api_atendimentos_obter(id):
+    atendimento = Atendimento.query.get_or_404(id)
+    return jsonify({
+        'success': True,
+        'atendimento': atendimento.to_dict()
+    })
+
+@app.route('/api/atendimentos', methods=['POST'])
+@login_required
+def api_atendimentos_criar():
+    data = request.get_json()
+    
+    try:
+        atendimento = Atendimento(
+            endereco_id=data['endereco_id'],
+            funcionario_id=data['funcionario_id'],
+            data_atendimento=datetime.strptime(data['data_atendimento'], '%Y-%m-%d').date(),
+            hora_chegada=datetime.strptime(data['hora_chegada'], '%H:%M').time(),
+            hora_inicio=datetime.strptime(data['hora_inicio'], '%H:%M').time(),
+            hora_fim=datetime.strptime(data['hora_fim'], '%H:%M').time(),
+            tempo_deslocamento=int(data['tempo_deslocamento']),
+            historico=data['historico']
+        )
+        
+        db.session.add(atendimento)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Atendimento registrado com sucesso',
+            'atendimento': atendimento.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/atendimentos/<int:id>', methods=['PUT'])
+@login_required
+def api_atendimentos_atualizar(id):
+    atendimento = Atendimento.query.get_or_404(id)
+    data = request.get_json()
+    
+    try:
+        atendimento.endereco_id = data.get('endereco_id', atendimento.endereco_id)
+        atendimento.funcionario_id = data.get('funcionario_id', atendimento.funcionario_id)
+        atendimento.data_atendimento = datetime.strptime(data['data_atendimento'], '%Y-%m-%d').date()
+        atendimento.hora_chegada = datetime.strptime(data['hora_chegada'], '%H:%M').time()
+        atendimento.hora_inicio = datetime.strptime(data['hora_inicio'], '%H:%M').time()
+        atendimento.hora_fim = datetime.strptime(data['hora_fim'], '%H:%M').time()
+        atendimento.tempo_deslocamento = int(data['tempo_deslocamento'])
+        atendimento.historico = data.get('historico', atendimento.historico)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Atendimento atualizado com sucesso',
+            'atendimento': atendimento.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/atendimentos/<int:id>', methods=['DELETE'])
+@login_required
+def api_atendimentos_deletar(id):
+    atendimento = Atendimento.query.get_or_404(id)
+    
+    try:
+        db.session.delete(atendimento)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Atendimento excluído com sucesso'})
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500

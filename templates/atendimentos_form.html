@@ -1,0 +1,417 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}{{ 'Editar' if atendimento else 'Novo' }} Atendimento{% endblock %}
+
+{% block page_title %}{{ 'Editar' if atendimento else 'Novo' }} Atendimento{% endblock %}
+
+{% block page_styles %}
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #667eea;
+    text-decoration: none;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.form-card {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    max-width: 800px;
+}
+
+.form-section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+}
+
+.form-section h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-size: 16px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.form-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    margin-bottom: 8px;
+    color: #555;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.info-box {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    border-left: 4px solid #667eea;
+    margin-top: 15px;
+}
+
+.info-box p {
+    margin: 5px 0;
+    color: #555;
+}
+
+.info-box strong {
+    color: #2c3e50;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 30px;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.alert {
+    padding: 12px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    display: none;
+}
+
+.alert-error {
+    background: #fee;
+    color: #c33;
+    border: 1px solid #fcc;
+}
+
+.alert-success {
+    background: #efe;
+    color: #3c3;
+    border: 1px solid #cfc;
+}
+{% endblock %}
+
+{% block page_content %}
+<a href="/atendimentos" class="back-link">← Voltar para lista</a>
+
+<div class="form-card">
+    <div id="alert" class="alert"></div>
+    
+    <form id="atendimentoForm">
+        <!-- Endereço e Funcionário -->
+        <div class="form-section">
+            <h3>📍 Local e Responsável</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="endereco_id">Cliente / Endereço *</label>
+                    <select id="endereco_id" name="endereco_id" required>
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="funcionario_id">Funcionário *</label>
+                    <select id="funcionario_id" name="funcionario_id" required>
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Data e Horários -->
+        <div class="form-section">
+            <h3>🕐 Data e Horários</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="data_atendimento">Data do Atendimento *</label>
+                    <input type="date" id="data_atendimento" name="data_atendimento" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="tempo_deslocamento">Tempo Deslocamento (minutos) *</label>
+                    <input type="number" id="tempo_deslocamento" name="tempo_deslocamento" min="0" required>
+                </div>
+            </div>
+            
+            <div class="form-grid-3">
+                <div class="form-group">
+                    <label for="hora_chegada">Hora Chegada *</label>
+                    <input type="time" id="hora_chegada" name="hora_chegada" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="hora_inicio">Hora Início *</label>
+                    <input type="time" id="hora_inicio" name="hora_inicio" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="hora_fim">Hora Fim *</label>
+                    <input type="time" id="hora_fim" name="hora_fim" required>
+                </div>
+            </div>
+            
+            <div id="tempo-info" class="info-box" style="display: none;">
+                <p><strong>Tempo de Atendimento:</strong> <span id="tempo-atendimento">0</span> minutos</p>
+            </div>
+        </div>
+        
+        <!-- Histórico -->
+        <div class="form-section">
+            <h3>📝 Histórico do Atendimento</h3>
+            <div class="form-group full-width">
+                <label for="historico">Descrição *</label>
+                <textarea id="historico" name="historico" rows="8" required 
+                          placeholder="Descreva detalhadamente o atendimento realizado, problemas encontrados, soluções aplicadas, etc."></textarea>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="window.location.href='/atendimentos'">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+                {{ 'Atualizar' if atendimento else 'Cadastrar' }}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+const atendimentoId = {{ atendimento.id if atendimento else 'null' }};
+</script>
+{% endblock %}
+
+{% block page_scripts %}
+let enderecos = [];
+let funcionarios = [];
+
+async function carregarDados() {
+    try {
+        const response = await fetch('/api/atendimentos');
+        const data = await response.json();
+        
+        if (data.success) {
+            enderecos = data.enderecos;
+            funcionarios = data.funcionarios;
+            
+            // Preencher select de endereços
+            const selectEndereco = document.getElementById('endereco_id');
+            selectEndereco.innerHTML = '<option value="">Selecione...</option>';
+            data.enderecos.forEach(end => {
+                const option = document.createElement('option');
+                option.value = end.id;
+                option.textContent = end.descricao;
+                selectEndereco.appendChild(option);
+            });
+            
+            // Preencher select de funcionários
+            const selectFunc = document.getElementById('funcionario_id');
+            selectFunc.innerHTML = '<option value="">Selecione...</option>';
+            data.funcionarios.forEach(func => {
+                const option = document.createElement('option');
+                option.value = func.id;
+                option.textContent = `${func.nome} (RE: ${func.re})`;
+                selectFunc.appendChild(option);
+            });
+            
+            // Se estiver editando, carregar dados
+            if (atendimentoId) {
+                await carregarAtendimento();
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+        showAlert('Erro ao carregar dados', 'error');
+    }
+}
+
+async function carregarAtendimento() {
+    try {
+        const response = await fetch(`/api/atendimentos/${atendimentoId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const atend = data.atendimento;
+            document.getElementById('endereco_id').value = atend.endereco_id;
+            document.getElementById('funcionario_id').value = atend.funcionario_id;
+            document.getElementById('data_atendimento').value = atend.data_atendimento_iso;
+            document.getElementById('hora_chegada').value = atend.hora_chegada;
+            document.getElementById('hora_inicio').value = atend.hora_inicio;
+            document.getElementById('hora_fim').value = atend.hora_fim;
+            document.getElementById('tempo_deslocamento').value = atend.tempo_deslocamento;
+            document.getElementById('historico').value = atend.historico;
+            
+            calcularTempoAtendimento();
+        }
+    } catch (error) {
+        console.error('Erro ao carregar atendimento:', error);
+        showAlert('Erro ao carregar atendimento', 'error');
+    }
+}
+
+function calcularTempoAtendimento() {
+    const inicio = document.getElementById('hora_inicio').value;
+    const fim = document.getElementById('hora_fim').value;
+    
+    if (inicio && fim) {
+        const [hI, mI] = inicio.split(':').map(Number);
+        const [hF, mF] = fim.split(':').map(Number);
+        
+        const minInicio = hI * 60 + mI;
+        const minFim = hF * 60 + mF;
+        const diferenca = minFim - minInicio;
+        
+        if (diferenca > 0) {
+            document.getElementById('tempo-atendimento').textContent = diferenca;
+            document.getElementById('tempo-info').style.display = 'block';
+        } else {
+            document.getElementById('tempo-info').style.display = 'none';
+        }
+    }
+}
+
+// Calcular automaticamente quando mudar horários
+document.getElementById('hora_inicio').addEventListener('change', calcularTempoAtendimento);
+document.getElementById('hora_fim').addEventListener('change', calcularTempoAtendimento);
+
+// Definir data atual como padrão
+if (!atendimentoId) {
+    const hoje = new Date().toISOString().split('T')[0];
+    document.getElementById('data_atendimento').value = hoje;
+}
+
+function showAlert(message, type) {
+    const alert = document.getElementById('alert');
+    alert.textContent = message;
+    alert.className = `alert alert-${type}`;
+    alert.style.display = 'block';
+    setTimeout(() => {
+        alert.style.display = 'none';
+    }, 5000);
+}
+
+document.getElementById('atendimentoForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Salvando...';
+    
+    const formData = {
+        endereco_id: document.getElementById('endereco_id').value,
+        funcionario_id: document.getElementById('funcionario_id').value,
+        data_atendimento: document.getElementById('data_atendimento').value,
+        hora_chegada: document.getElementById('hora_chegada').value,
+        hora_inicio: document.getElementById('hora_inicio').value,
+        hora_fim: document.getElementById('hora_fim').value,
+        tempo_deslocamento: document.getElementById('tempo_deslocamento').value,
+        historico: document.getElementById('historico').value
+    };
+    
+    try {
+        const url = atendimentoId ? `/api/atendimentos/${atendimentoId}` : '/api/atendimentos';
+        const method = atendimentoId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert(data.message, 'success');
+            setTimeout(() => {
+                window.location.href = '/atendimentos';
+            }, 1500);
+        } else {
+            showAlert(data.message, 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    } catch (error) {
+        console.error('Erro ao salvar atendimento:', error);
+        showAlert('Erro ao salvar atendimento', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+});
+
+// Carregar dados ao iniciar
+document.addEventListener('DOMContentLoaded', carregarDados);
+{% endblock %}

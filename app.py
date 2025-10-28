@@ -7,7 +7,7 @@ import os
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://appuser:apppass123@localhost:5432/appdb')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://appuser:apppass123@172.24.167.206:5432/appdb')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -16,6 +16,27 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 # Models
+class Fornecedor(db.Model):
+    __tablename__ = 'fornecedores'
+    id = db.Column(db.Integer, primary_key=True)
+    nome_empresa = db.Column(db.String(200), nullable=False)
+    cnpj = db.Column(db.String(18), unique=True, nullable=False)
+    pronta_resposta = db.Column(db.Boolean, default=False)
+    valor_hora_homem = db.Column(db.Numeric(10, 2), nullable=False)
+    ativo = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+   
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'nome_empresa': self.nome_empresa,
+            'cnpj': self.cnpj,
+            'pronta_resposta': self.pronta_resposta,
+            'valor_hora_homem': float(self.valor_hora_homem),
+            'ativo': self.ativo
+        }
+    
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -344,6 +365,21 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 # Routes - Páginas
+@app.route('/fornecedores')
+@login_required
+def fornecedores():
+    return render_template('fornecedores.html', user=current_user)
+
+@app.route('/fornecedores/novo')
+@login_required
+def fornecedores_novo():
+    return render_template('fornecedores_form.html', user=current_user, fornecedor=None)
+
+@app.route('/fornecedores/<int:id>/editar')
+@login_required
+def fornecedores_editar(id):
+    fornecedor = Fornecedor.query.get_or_404(id)
+    return render_template('fornecedores_form.html', user=current_user, fornecedor=fornecedor)
 @app.route('/')
 def index():
     if current_user.is_authenticated:
@@ -413,6 +449,110 @@ def home():
         resumo_clientes=resumo_clientes
     )
 
+
+@app.route('/api/fornecedores', methods=['GET'])
+@login_required
+def api_fornecedores_listar():
+    filtro = request.args.get('filtro', 'todos')
+    
+    query = Fornecedor.query
+    
+    if filtro == 'ativos':
+        query = query.filter_by(ativo=True)
+    elif filtro == 'inativos':
+        query = query.filter_by(ativo=False)
+    elif filtro == 'pronta_resposta':
+        query = query.filter_by(pronta_resposta=True, ativo=True)
+    
+    fornecedores = query.order_by(Fornecedor.nome_empresa).all()
+    return jsonify({
+        'success': True,
+        'fornecedores': [f.to_dict() for f in fornecedores]
+    })
+
+@app.route('/api/fornecedores/<int:id>', methods=['GET'])
+@login_required
+def api_fornecedores_obter(id):
+    fornecedor = Fornecedor.query.get_or_404(id)
+    return jsonify({
+        'success': True,
+        'fornecedor': fornecedor.to_dict()
+    })
+
+
+
+@app.route('/api/fornecedores', methods=['POST'])
+@login_required
+def api_fornecedores_criar():
+    data = request.get_json()
+    
+    try:
+        # Verificar se CNPJ já existe
+        if Fornecedor.query.filter_by(cnpj=data['cnpj']).first():
+            return jsonify({'success': False, 'message': 'CNPJ já cadastrado'}), 400
+        
+        fornecedor = Fornecedor(
+            nome_empresa=data['nome_empresa'],
+            cnpj=data['cnpj'],
+            pronta_resposta=data.get('pronta_resposta', False),
+            valor_hora_homem=data['valor_hora_homem'],
+            ativo=data.get('ativo', True)
+        )
+        
+        db.session.add(fornecedor)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Fornecedor cadastrado com sucesso',
+            'fornecedor': fornecedor.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@app.route('/api/fornecedores/<int:id>', methods=['PUT'])
+@login_required
+def api_fornecedores_atualizar(id):
+    fornecedor = Fornecedor.query.get_or_404(id)
+    data = request.get_json()
+    
+    try:
+        # Verificar se está tentando mudar CNPJ para um já existente
+        if data.get('cnpj') and data['cnpj'] != fornecedor.cnpj:
+            if Fornecedor.query.filter_by(cnpj=data['cnpj']).first():
+                return jsonify({'success': False, 'message': 'CNPJ já cadastrado'}), 400
+        
+        fornecedor.nome_empresa = data.get('nome_empresa', fornecedor.nome_empresa)
+        fornecedor.cnpj = data.get('cnpj', fornecedor.cnpj)
+        fornecedor.pronta_resposta = data.get('pronta_resposta', fornecedor.pronta_resposta)
+        fornecedor.valor_hora_homem = data.get('valor_hora_homem', fornecedor.valor_hora_homem)
+        fornecedor.ativo = data.get('ativo', fornecedor.ativo)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Fornecedor atualizado com sucesso',
+            'fornecedor': fornecedor.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/fornecedores/<int:id>', methods=['DELETE'])
+@login_required
+def api_fornecedores_deletar(id):
+    fornecedor = Fornecedor.query.get_or_404(id)
+    try:
+        db.session.delete(fornecedor)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Fornecedor excluído com sucesso'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+    
 @app.route('/profile')
 @login_required
 def profile():

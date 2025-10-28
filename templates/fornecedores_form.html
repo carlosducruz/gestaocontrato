@@ -1,0 +1,438 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}{{ 'Editar' if fornecedor else 'Novo' }} Fornecedor{% endblock %}
+
+{% block page_title %}{{ 'Editar' if fornecedor else 'Novo' }} Fornecedor{% endblock %}
+
+{% block page_styles %}
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #667eea;
+    text-decoration: none;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.form-card {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    max-width: 700px;
+}
+
+.form-section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.form-section:last-of-type {
+    border-bottom: none;
+}
+
+.form-section h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-size: 16px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    margin-bottom: 8px;
+    color: #555;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select {
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 5px;
+    border: 2px dashed #ddd;
+    transition: all 0.3s;
+}
+
+.checkbox-group:has(input:checked) {
+    background: #fff3cd;
+    border-color: #ffc107;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.checkbox-group label {
+    margin: 0;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+}
+
+.checkbox-group label small {
+    color: #999;
+    font-weight: normal;
+    margin-top: 2px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 30px;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.alert {
+    padding: 12px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    display: none;
+}
+
+.alert-error {
+    background: #fee;
+    color: #c33;
+    border: 1px solid #fcc;
+}
+
+.alert-success {
+    background: #efe;
+    color: #3c3;
+    border: 1px solid #cfc;
+}
+
+.input-group {
+    position: relative;
+}
+
+.input-prefix {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+    font-weight: 600;
+}
+
+.input-with-prefix {
+    padding-left: 45px;
+}
+
+.info-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    background: #e3f2fd;
+    color: #1976d2;
+    border-radius: 5px;
+    font-size: 13px;
+    margin-top: 5px;
+}
+{% endblock %}
+
+{% block page_content %}
+<a href="/fornecedores" class="back-link">← Voltar para lista</a>
+
+<div class="form-card">
+    <div id="alert" class="alert"></div>
+    
+    <form id="fornecedorForm">
+        <!-- Dados Básicos -->
+        <div class="form-section">
+            <h3>🏢 Dados da Empresa</h3>
+            
+            <div class="form-group full-width">
+                <label for="nome_empresa">Nome da Empresa *</label>
+                <input type="text" id="nome_empresa" name="nome_empresa" required 
+                       placeholder="Ex: Empresa de Segurança XYZ Ltda"
+                       maxlength="200">
+            </div>
+            
+            <div class="form-group full-width">
+                <label for="cnpj">CNPJ *</label>
+                <input type="text" id="cnpj" name="cnpj" required 
+                       placeholder="00.000.000/0000-00"
+                       maxlength="18">
+                <small style="color: #999; margin-top: 5px;">Formato: 00.000.000/0000-00</small>
+            </div>
+        </div>
+        
+        <!-- Valores e Tipo -->
+        <div class="form-section">
+            <h3>💰 Valores e Classificação</h3>
+            
+            <div class="form-group full-width">
+                <label for="valor_hora_homem">Valor Hora/Homem *</label>
+                <div class="input-group">
+                    <span class="input-prefix">R$</span>
+                    <input type="number" id="valor_hora_homem" name="valor_hora_homem" 
+                           class="input-with-prefix" required 
+                           step="0.01" min="0"
+                           placeholder="0,00">
+                </div>
+                <span class="info-badge">💡 Valor cobrado por hora de trabalho de um profissional</span>
+            </div>
+            
+            <div class="form-group full-width">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="pronta_resposta" name="pronta_resposta">
+                    <label for="pronta_resposta">
+                        ⚡ Empresa de Pronta Resposta
+                        <small>Fornecedor disponível para atendimentos emergenciais</small>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Status -->
+        <div class="form-section">
+            <h3>📊 Status</h3>
+            
+            <div class="form-group full-width">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="ativo" name="ativo" checked>
+                    <label for="ativo">
+                        Fornecedor Ativo
+                        <small>Fornecedores inativos não aparecem nas listagens de seleção</small>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="window.location.href='/fornecedores'">
+                Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+                {{ 'Atualizar' if fornecedor else 'Cadastrar' }}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+const fornecedorId = {{ fornecedor.id if fornecedor else 'null' }};
+</script>
+{% endblock %}
+
+{% block page_scripts %}
+// Máscara de CNPJ
+document.getElementById('cnpj').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    
+    if (value.length <= 14) {
+        value = value.replace(/(\d{2})(\d)/, '$1.$2');
+        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+        value = value.replace(/(\d{3})(\d)/, '$1/$2');
+        value = value.replace(/(\d{4})(\d)/, '$1-$2');
+    }
+    
+    e.target.value = value;
+});
+
+// Formatação de valor monetário
+document.getElementById('valor_hora_homem').addEventListener('blur', function(e) {
+    if (e.target.value) {
+        const valor = parseFloat(e.target.value);
+        if (!isNaN(valor)) {
+            e.target.value = valor.toFixed(2);
+        }
+    }
+});
+
+async function carregarFornecedor() {
+    if (!fornecedorId) return;
+    
+    try {
+        const response = await fetch(`/api/fornecedores/${fornecedorId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const fornecedor = data.fornecedor;
+            document.getElementById('nome_empresa').value = fornecedor.nome_empresa;
+            document.getElementById('cnpj').value = formatarCNPJ(fornecedor.cnpj);
+            document.getElementById('valor_hora_homem').value = fornecedor.valor_hora_homem.toFixed(2);
+            document.getElementById('pronta_resposta').checked = fornecedor.pronta_resposta;
+            document.getElementById('ativo').checked = fornecedor.ativo;
+        }
+    } catch (error) {
+        console.error('Erro ao carregar fornecedor:', error);
+        showAlert('Erro ao carregar fornecedor', 'error');
+    }
+}
+
+function formatarCNPJ(cnpj) {
+    cnpj = cnpj.replace(/\D/g, '');
+    return cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+}
+
+function validarCNPJ(cnpj) {
+    cnpj = cnpj.replace(/\D/g, '');
+    
+    if (cnpj.length !== 14) {
+        return false;
+    }
+    
+    // Validação básica de CNPJ
+    if (/^(\d)\1+$/.test(cnpj)) {
+        return false;
+    }
+    
+    return true;
+}
+
+function showAlert(message, type) {
+    const alert = document.getElementById('alert');
+    alert.textContent = message;
+    alert.className = `alert alert-${type}`;
+    alert.style.display = 'block';
+    
+    setTimeout(() => {
+        alert.style.display = 'none';
+    }, 5000);
+}
+
+document.getElementById('fornecedorForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    const originalText = submitBtn.textContent;
+    
+    // Validar CNPJ
+    const cnpjInput = document.getElementById('cnpj').value;
+    if (!validarCNPJ(cnpjInput)) {
+        showAlert('CNPJ inválido. Verifique o formato e tente novamente.', 'error');
+        return;
+    }
+    
+    // Validar valor
+    const valor = parseFloat(document.getElementById('valor_hora_homem').value);
+    if (isNaN(valor) || valor <= 0) {
+        showAlert('Valor Hora/Homem deve ser maior que zero.', 'error');
+        return;
+    }
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Salvando...';
+    
+    // Remover formatação do CNPJ
+    const cnpj = cnpjInput.replace(/\D/g, '');
+    
+    const formData = {
+        nome_empresa: document.getElementById('nome_empresa').value,
+        cnpj: cnpj,
+        pronta_resposta: document.getElementById('pronta_resposta').checked,
+        valor_hora_homem: valor,
+        ativo: document.getElementById('ativo').checked
+    };
+    
+    try {
+        const url = fornecedorId ? `/api/fornecedores/${fornecedorId}` : '/api/fornecedores';
+        const method = fornecedorId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert(data.message, 'success');
+            setTimeout(() => {
+                window.location.href = '/fornecedores';
+            }, 1500);
+        } else {
+            showAlert(data.message, 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    } catch (error) {
+        console.error('Erro ao salvar fornecedor:', error);
+        showAlert('Erro ao salvar fornecedor', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+});
+
+// Carregar dados ao iniciar
+document.addEventListener('DOMContentLoaded', () => {
+    if (fornecedorId) {
+        carregarFornecedor();
+    }
+});
+{% endblock %}

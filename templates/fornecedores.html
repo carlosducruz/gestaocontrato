@@ -1,8 +1,8 @@
 {% extends "dashboard_base.html" %}
 
-{% block title %}Regiões{% endblock %}
+{% block title %}Fornecedores{% endblock %}
 
-{% block page_title %}Gestão de Regiões{% endblock %}
+{% block page_title %}Gestão de Fornecedores{% endblock %}
 
 {% block page_styles %}
 .toolbar {
@@ -191,23 +191,10 @@ tr:hover {
         <button class="filter-btn" onclick="filtrar('inativos')">Inativos</button>
     </div>
     
-    <a href="/regioes/novo" class="btn-primary">+ Nova Região</a>
+    <a href="/fornecedores/novo" class="btn-primary">+ Novo Fornecedor</a>
 </div>
 
-<div class="stats-grid">
-    <div class="stat-card">
-        <h3>Total de Regiões</h3>
-        <div class="value" id="total-regioes">0</div>
-    </div>
-    <div class="stat-card">
-        <h3>Regiões Ativas</h3>
-        <div class="value" id="total-ativos">0</div>
-    </div>
-    <div class="stat-card">
-        <h3>Regiões Inativas</h3>
-        <div class="value" id="total-inativos">0</div>
-    </div>
-</div>
+ 
 
 <div class="table-container">
     <div id="loading" class="loading">Carregando...</div>
@@ -215,18 +202,18 @@ tr:hover {
         <table>
             <thead>
                 <tr>
-                    <th>Região</th>
-                    <th>Status</th>
-                    <th>Total de Endereços</th>
-                    <th>Endereços Ativos</th>
-                    <th>Ações</th>
+					<th>Empresa</th>
+					<th>CNPJ</th>
+					<th>Pronta Resposta</th>
+					<th>Valor Hora Homem</th>
+					<th>Ações</th>
                 </tr>
             </thead>
-            <tbody id="tbody-regioes">
+            <tbody id="tbody-fornecedores">
             </tbody>
         </table>
         <div id="empty-state" class="empty-state" style="display: none;">
-            <p>Nenhuma região encontrada</p>
+            <p>Nenhum fornecedor registrado</p>
         </div>
     </div>
 </div>
@@ -244,55 +231,43 @@ function filtrar(tipo) {
     });
     event.target.classList.add('active');
     
-    carregarRegioes();
+    carregarFornecedores();
 }
 
-async function carregarRegioes() {
+async function carregarFornecedores() {
     const loading = document.getElementById('loading');
     const content = document.getElementById('content');
-    const tbody = document.getElementById('tbody-regioes');
+    const tbody = document.getElementById('tbody-fornecedores');
     const emptyState = document.getElementById('empty-state');
     
     loading.style.display = 'block';
     content.style.display = 'none';
     
     try {
-        const response = await fetch(`/api/regioes?filtro=${filtroAtual}`);
+        const response = await fetch(`/api/fornecedores?filtro=${filtroAtual}`);
         const data = await response.json();
         
         tbody.innerHTML = '';
         
-        // Calcular estatísticas
-        const totalRegioes = data.regioes.length;
-        const totalAtivos = data.regioes.filter(r => r.ativo).length;
-        const totalInativos = totalRegioes - totalAtivos;
-        
-        document.getElementById('total-regioes').textContent = totalRegioes;
-        document.getElementById('total-ativos').textContent = totalAtivos;
-        document.getElementById('total-inativos').textContent = totalInativos;
-        
-        if (data.regioes.length === 0) {
+       
+        if (data.fornecedores.length === 0) {
             emptyState.style.display = 'block';
         } else {
             emptyState.style.display = 'none';
             
-            data.regioes.forEach(regiao => {
+            data.fornecedores.forEach(fornecedor => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><strong>${regiao.nome}</strong></td>
-                    <td>
-                        <span class="status-badge status-${regiao.ativo ? 'ativo' : 'inativo'}">
-                            ${regiao.ativo ? 'Ativo' : 'Inativo'}
-                        </span>
-                    </td>
-                    <td>${regiao.total_enderecos}</td>
-                    <td>${regiao.enderecos_ativos}</td>
+					<td><strong>${fornecedor.nome_empresa}</strong></td>
+					<td>${fornecedor.cnpj}</td>
+					<td>${fornecedor.pronta_resposta ? 'Sim' : 'Não'}</td>
+					<td>R$ ${fornecedor.valor_hora_homem.toFixed(2) }</td>
                     <td>
                         <div class="action-buttons">
-                            <button class="btn-icon btn-edit" onclick="editar(${regiao.id})" title="Editar">
+                            <button class="btn-icon btn-edit" onclick="editar(${fornecedor.id})" title="Editar">
                                 ✏️
                             </button>
-                            <button class="btn-icon btn-delete" onclick="excluir(${regiao.id}, '${regiao.nome}', ${regiao.total_enderecos})" title="Excluir">
+                            <button class="btn-icon btn-delete" onclick="excluir(${fornecedor.id}, '${fornecedor.nome}', ${fornecedor.total_enderecos})" title="Excluir">
                                 🗑️
                             </button>
                         </div>
@@ -305,14 +280,14 @@ async function carregarRegioes() {
         loading.style.display = 'none';
         content.style.display = 'block';
     } catch (error) {
-        console.error('Erro ao carregar regiões:', error);
+        console.error('Erro ao carregar fornecedores:', error);
         loading.style.display = 'none';
         alert('Erro ao carregar regiões');
     }
 }
 
 function editar(id) {
-    window.location.href = `/regioes/${id}/editar`;
+    window.location.href = `/fornecedores/${id}/editar`;
 }
 
 async function excluir(id, nome, totalEnderecos) {
@@ -326,7 +301,7 @@ async function excluir(id, nome, totalEnderecos) {
     }
     
     try {
-        const response = await fetch(`/api/regioes/${id}`, {
+        const response = await fetch(`/api/fornecedores/${id}`, {
             method: 'DELETE'
         });
         
@@ -334,7 +309,7 @@ async function excluir(id, nome, totalEnderecos) {
         
         if (data.success) {
             alert(data.message);
-            carregarRegioes();
+            carregarFornecedores();
         } else {
             alert('Erro: ' + data.message);
         }
@@ -345,5 +320,10 @@ async function excluir(id, nome, totalEnderecos) {
 }
 
 // Carregar regiões ao iniciar
-document.addEventListener('DOMContentLoaded', carregarRegioes);
+document.addEventListener('DOMContentLoaded', carregarFornecedores);
 {% endblock %}
+
+
+
+
+ 

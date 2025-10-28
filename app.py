@@ -197,9 +197,31 @@ class Cliente(db.Model):
         }
 
 
+class Regiao(db.Model):
+    __tablename__ = 'regioes'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(50), unique=True, nullable=False)
+    ativo = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relacionamento com endereços
+    enderecos = db.relationship('Endereco', backref='regiao', lazy=True)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'nome': self.nome,
+            'ativo': self.ativo,
+            'total_enderecos': len(self.enderecos),
+            'enderecos_ativos': sum(1 for e in self.enderecos if e.ativo)
+        }
+
+
 class Endereco(db.Model):
     __tablename__ = 'enderecos'
     id = db.Column(db.Integer, primary_key=True)
+    regiao_id = db.Column(db.Integer, db.ForeignKey('regioes.id'), nullable=True)
     cliente_id = db.Column(db.Integer, db.ForeignKey('clientes.id'), nullable=False)
     nr_contrato = db.Column(db.String(50), nullable=False)
     data_ativacao_contrato = db.Column(db.Date, nullable=False)
@@ -247,6 +269,7 @@ class Endereco(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
+            'regiao_id': self.regiao_id,
             'cliente_id': self.cliente_id,
             'nr_contrato': self.nr_contrato,
             'data_ativacao_contrato': self.data_ativacao_contrato.strftime('%d/%m/%Y'),
@@ -414,7 +437,9 @@ def clientes_editar(id):
 @login_required
 def clientes_enderecos(id):
     cliente = Cliente.query.get_or_404(id)
-    return render_template('clientes_enderecos.html', user=current_user, cliente=cliente)
+    # Buscar todas as regiões
+    regioes = Regiao.query.order_by(Regiao.nome).all()
+    return render_template('clientes_enderecos.html', user=current_user, cliente=cliente, regioes=regioes)
 
 @app.route('/atendimentos')
 @login_required
@@ -431,6 +456,24 @@ def atendimentos_novo():
 def atendimentos_editar(id):
     atendimento = Atendimento.query.get_or_404(id)
     return render_template('atendimentos_form.html', user=current_user, atendimento=atendimento)
+
+
+@app.route('/regioes')
+@login_required
+def regioes():
+    return render_template('regioes.html', user=current_user)
+
+@app.route('/regioes/novo')
+@login_required
+def regioes_novo():
+    return render_template('regioes_form.html', user=current_user, regiao=None)
+
+@app.route('/regioes/<int:id>/editar')
+@login_required
+def regioes_editar(id):
+    regiao = Regiao.query.get_or_404(id)
+    return render_template('regioes_form.html', user=current_user, regiao=regiao)
+
 
 # API Routes - Autenticação
 @app.route('/api/login', methods=['POST'])
@@ -1081,6 +1124,7 @@ def api_enderecos_criar(cliente_id):
     try:
         endereco = Endereco(
             cliente_id=cliente_id,
+            regiao_id=data.get('regiao_id'),
             nr_contrato=data['nr_contrato'],
             data_ativacao_contrato=datetime.strptime(data['data_ativacao_contrato'], '%Y-%m-%d').date(),
             data_validade_contrato=datetime.strptime(data['data_validade_contrato'], '%Y-%m-%d').date(),
@@ -1126,6 +1170,7 @@ def api_enderecos_atualizar(cliente_id, endereco_id):
     data = request.get_json()
     
     try:
+        endereco.regiao_id = data.get('regiao_id', endereco.regiao_id)
         endereco.nr_contrato = data.get('nr_contrato', endereco.nr_contrato)
         endereco.data_ativacao_contrato = datetime.strptime(data['data_ativacao_contrato'], '%Y-%m-%d').date()
         endereco.data_validade_contrato = datetime.strptime(data['data_validade_contrato'], '%Y-%m-%d').date()
@@ -1325,9 +1370,126 @@ def api_atendimentos_deletar(id):
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
+
+
+
+@app.route('/api/regioes', methods=['GET'])
+@login_required
+def api_regioes_listar():
+    filtro = request.args.get('filtro', 'todos')
+    
+    query = Regiao.query
+    
+    if filtro == 'ativos':
+        query = query.filter_by(ativo=True)
+    elif filtro == 'inativos':
+        query = query.filter_by(ativo=False)
+    
+    regioes = query.order_by(Regiao.nome).all()
+    return jsonify({
+        'success': True,
+        'regioes': [r.to_dict() for r in regioes]
+    })
+
+@app.route('/api/regioes/<int:id>', methods=['GET'])
+@login_required
+def api_regioes_obter(id):
+    regiao = Regiao.query.get_or_404(id)
+    return jsonify({
+        'success': True,
+        'regiao': regiao.to_dict()
+    })
+
+@app.route('/api/regioes', methods=['POST'])
+@login_required
+def api_regioes_criar():
+    data = request.get_json()
+    
+    try:
+        # Verificar se região já existe
+        if Regiao.query.filter_by(nome=data['nome']).first():
+            return jsonify({'success': False, 'message': 'Região já cadastrada'}), 400
+        
+        regiao = Regiao(
+            nome=data['nome'],
+            ativo=data.get('ativo', True)
+        )
+        
+        db.session.add(regiao)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Região cadastrada com sucesso',
+            'regiao': regiao.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/regioes/<int:id>', methods=['PUT'])
+@login_required
+def api_regioes_atualizar(id):
+    regiao = Regiao.query.get_or_404(id)
+    data = request.get_json()
+    
+    try:
+        # Verificar se está tentando mudar nome para um já existente
+        if data.get('nome') and data['nome'] != regiao.nome:
+            if Regiao.query.filter_by(nome=data['nome']).first():
+                return jsonify({'success': False, 'message': 'Região já cadastrada'}), 400
+        
+        regiao.nome = data.get('nome', regiao.nome)
+        regiao.ativo = data.get('ativo', regiao.ativo)
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Região atualizada com sucesso',
+            'regiao': regiao.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/regioes/<int:id>', methods=['DELETE'])
+@login_required
+def api_regioes_deletar(id):
+    regiao = Regiao.query.get_or_404(id)
+    
+    try:
+        # Verificar se há endereços vinculados
+        if len(regiao.enderecos) > 0:
+            return jsonify({
+                'success': False, 
+                'message': 'Não é possível excluir região com endereços vinculados'
+            }), 400
+        
+        db.session.delete(regiao)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Região excluída com sucesso'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+
 # Inicializar banco de dados
 def init_db():
     with app.app_context():
+        def popular_regioes_iniciais():
+            """Popula as regiões iniciais se não existirem"""
+            regioes_padrao = ['Norte', 'Sul', 'Leste', 'Oeste', 'Centro']
+            
+            for nome_regiao in regioes_padrao:
+                if not Regiao.query.filter_by(nome=nome_regiao).first():
+                    regiao = Regiao(nome=nome_regiao, ativo=True)
+                    db.session.add(regiao)
+            
+            db.session.commit()
+            print('✅ Regiões padrão criadas')
+                    
         db.create_all()
         # Criar usuário admin padrão se não existir
         if not User.query.filter_by(username='admin').first():
@@ -1336,6 +1498,9 @@ def init_db():
             db.session.add(admin)
             db.session.commit()
             print('✅ Usuário admin criado: admin/admin123')
+
+
+
 
 if __name__ == '__main__':
     init_db()

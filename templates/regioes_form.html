@@ -1,0 +1,288 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}{{ 'Editar' if regiao else 'Nova' }} Região{% endblock %}
+
+{% block page_title %}{{ 'Editar' if regiao else 'Nova' }} Região{% endblock %}
+
+{% block page_styles %}
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #667eea;
+    text-decoration: none;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.form-card {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    max-width: 600px;
+}
+
+.form-section {
+    margin-bottom: 30px;
+}
+
+.form-section h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-size: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    margin-bottom: 8px;
+    color: #555;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select {
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.checkbox-group label {
+    margin: 0;
+    cursor: pointer;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.alert {
+    padding: 12px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    display: none;
+}
+
+.alert-error {
+    background: #fee;
+    color: #c33;
+    border: 1px solid #fcc;
+}
+
+.alert-success {
+    background: #efe;
+    color: #3c3;
+    border: 1px solid #cfc;
+}
+
+.info-box {
+    background: #e3f2fd;
+    padding: 15px;
+    border-radius: 5px;
+    border-left: 4px solid #2196F3;
+    margin-bottom: 20px;
+    font-size: 14px;
+    color: #555;
+}
+{% endblock %}
+
+{% block page_content %}
+<a href="/regioes" class="back-link">← Voltar para lista</a>
+
+<div class="form-card">
+    <div id="alert" class="alert"></div>
+    
+    {% if regiao and regiao.total_enderecos > 0 %}
+    <div class="info-box">
+        ℹ️ Esta região possui <strong>{{ regiao.total_enderecos }}</strong> endereço(s) vinculado(s).
+    </div>
+    {% endif %}
+    
+    <form id="regiaoForm">
+        <!-- Dados Básicos -->
+        <div class="form-section">
+            <h3>📍 Dados da Região</h3>
+            
+            <div class="form-group">
+                <label for="nome">Nome da Região *</label>
+                <input type="text" id="nome" name="nome" required 
+                       placeholder="Ex: Norte, Sul, Leste, Oeste, Centro"
+                       maxlength="50">
+            </div>
+            
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="ativo" name="ativo" checked>
+                    <label for="ativo">Região Ativa</label>
+                </div>
+                <small style="color: #999; margin-top: 5px; display: block;">
+                    Regiões inativas não aparecem nas listagens de seleção
+                </small>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="window.location.href='/regioes'">
+                Cancelar
+            </button>
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+                {{ 'Atualizar' if regiao else 'Cadastrar' }}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+const regiaoId = {{ regiao.id if regiao else 'null' }};
+</script>
+{% endblock %}
+
+{% block page_scripts %}
+async function carregarRegiao() {
+    if (!regiaoId) return;
+    
+    try {
+        const response = await fetch(`/api/regioes/${regiaoId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const regiao = data.regiao;
+            document.getElementById('nome').value = regiao.nome;
+            document.getElementById('ativo').checked = regiao.ativo;
+        }
+    } catch (error) {
+        console.error('Erro ao carregar região:', error);
+        showAlert('Erro ao carregar região', 'error');
+    }
+}
+
+function showAlert(message, type) {
+    const alert = document.getElementById('alert');
+    alert.textContent = message;
+    alert.className = `alert alert-${type}`;
+    alert.style.display = 'block';
+    
+    setTimeout(() => {
+        alert.style.display = 'none';
+    }, 5000);
+}
+
+document.getElementById('regiaoForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Salvando...';
+    
+    const formData = {
+        nome: document.getElementById('nome').value,
+        ativo: document.getElementById('ativo').checked
+    };
+    
+    try {
+        const url = regiaoId ? `/api/regioes/${regiaoId}` : '/api/regioes';
+        const method = regiaoId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert(data.message, 'success');
+            setTimeout(() => {
+                window.location.href = '/regioes';
+            }, 1500);
+        } else {
+            showAlert(data.message, 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    } catch (error) {
+        console.error('Erro ao salvar região:', error);
+        showAlert('Erro ao salvar região', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+});
+
+// Carregar dados ao iniciar
+document.addEventListener('DOMContentLoaded', () => {
+    if (regiaoId) {
+        carregarRegiao();
+    }
+});
+{% endblock %}

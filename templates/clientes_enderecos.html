@@ -518,6 +518,17 @@
                             <option value="TO">TO</option>
                         </select>
                     </div>
+
+                     <div class="form-group">
+                        <label for="regiao_id">Região *</label>
+                        <select id="regiao_id" required>
+                            <option value="">Selecione...</option>
+                            {% for regiao in regioes %}
+                                <option value="{{ regiao.id }}">{{ regiao.nome }}</option>
+                            {% endfor %}    
+                       
+                        </select>
+                    </div>
                 </div>
             </div>
             
@@ -729,6 +740,7 @@ function abrirModal(endereco = null) {
         document.getElementById('bairro').value = endereco.bairro;
         document.getElementById('cidade').value = endereco.cidade;
         document.getElementById('estado').value = endereco.estado;
+        document.getElementById('regiao_id').value = endereco.regiao_id;
         document.getElementById('tipo_endereco').value = endereco.tipo_endereco;
         toggleCondominio();
         document.getElementById('portaria_remota').checked = endereco.portaria_remota;
@@ -882,6 +894,7 @@ document.getElementById('enderecoForm').addEventListener('submit', async (e) => 
         cep: document.getElementById('cep').value,
         cidade: document.getElementById('cidade').value,
         estado: document.getElementById('estado').value,
+        regiao_id: document.getElementById('regiao_id').value,
         tipo_endereco: document.getElementById('tipo_endereco').value,
         portaria_remota: document.getElementById('portaria_remota').checked,
         monitoramento: document.getElementById('monitoramento').checked,

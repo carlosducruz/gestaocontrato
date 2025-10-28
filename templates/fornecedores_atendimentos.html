@@ -1,0 +1,672 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Atendimentos - {{ fornecedor.nome_empresa }}{% endblock %}
+
+{% block page_title %}Atendimentos de Pronta Resposta{% endblock %}
+
+{% block page_styles %}
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #667eea;
+    text-decoration: none;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.fornecedor-header {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.fornecedor-header h2 {
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.fornecedor-header .info {
+    color: #7f8c8d;
+    font-size: 14px;
+}
+
+.fornecedor-header .valor-hora {
+    color: #27ae60;
+    font-weight: 600;
+    font-size: 18px;
+    margin-top: 10px;
+}
+
+.toolbar {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.filter-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.filter-group label {
+    color: #555;
+    font-weight: 500;
+}
+
+.filter-group input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.btn-primary {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.stat-card h3 {
+    color: #7f8c8d;
+    font-size: 13px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+.stat-card .value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.stat-card.highlight .value {
+    color: #27ae60;
+}
+
+.table-container {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    background: #f8f9fa;
+}
+
+th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 2px solid #dee2e6;
+}
+
+td {
+    padding: 15px;
+    border-bottom: 1px solid #dee2e6;
+    color: #555;
+}
+
+tr:hover {
+    background: #f8f9fa;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-icon {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s;
+}
+
+.btn-edit {
+    background: #3498db;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #2980b9;
+}
+
+.btn-delete {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #c0392b;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+}
+
+.historico-preview {
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 30px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #eee;
+}
+
+.modal-header h2 {
+    color: #2c3e50;
+    margin: 0;
+}
+
+.close {
+    font-size: 28px;
+    font-weight: bold;
+    color: #999;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: #333;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #555;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.btn-secondary {
+    padding: 10px 20px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.info-box {
+    background: #fff3cd;
+    padding: 15px;
+    border-radius: 5px;
+    border-left: 4px solid #f39c12;
+    margin-bottom: 20px;
+}
+
+.info-box strong {
+    color: #856404;
+}
+{% endblock %}
+
+{% block page_content %}
+<a href="/fornecedores" class="back-link">← Voltar para fornecedores</a>
+
+<div class="fornecedor-header">
+    <h2>⚡ {{ fornecedor.nome_empresa }}</h2>
+    <div class="info">CNPJ: {{ fornecedor.cnpj }}</div>
+    <div class="valor-hora">Valor Hora/Homem: R$ {{ "%.2f"|format(fornecedor.valor_hora_homem) }}</div>
+</div>
+
+<div class="toolbar">
+    <div class="filter-group">
+        <label for="filtro-mes">Mês:</label>
+        <input type="month" id="filtro-mes">
+        <button class="btn-primary" onclick="aplicarFiltros()">Filtrar</button>
+    </div>
+    
+    <button class="btn-primary" onclick="abrirModal()">+ Novo Atendimento</button>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>Total de Atendimentos</h3>
+        <div class="value" id="total-atendimentos">0</div>
+    </div>
+    <div class="stat-card">
+        <h3>Total de Horas</h3>
+        <div class="value" id="total-horas">0h</div>
+    </div>
+    <div class="stat-card highlight">
+        <h3>Valor Total</h3>
+        <div class="value" id="total-valor">R$ 0,00</div>
+    </div>
+</div>
+
+<div class="table-container">
+    <div id="loading" class="loading">Carregando...</div>
+    <div id="content" style="display: none;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Hora</th>
+                    <th>Representante</th>
+                    <th>Qtd. Horas</th>
+                    <th>Valor Hora</th>
+                    <th>Valor Total</th>
+                    <th>Histórico</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-fornecedores-atendimentos">
+            </tbody>
+        </table>
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <p>Nenhum atendimento registrado</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modal-title">Novo Atendimento</h2>
+            <span class="close" onclick="fecharModal()">&times;</span>
+        </div>
+        
+        <div class="info-box">
+            <strong>💡 Valor da Hora/Homem:</strong> R$ {{ "%.2f"|format(fornecedor.valor_hora_homem) }}
+        </div>
+        
+        <form id="fornecedorAtendimentoForm">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="data_atendimento">Data do Atendimento *</label>
+                    <input type="date" id="data_atendimento" name="data_atendimento" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="hora_atendimento">Hora do Atendimento *</label>
+                    <input type="time" id="hora_atendimento" name="hora_atendimento" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="nome_representante">Nome do Representante *</label>
+                <input type="text" id="nome_representante" name="nome_representante" required 
+                       placeholder="Ex: João Silva">
+            </div>
+            
+            <div class="form-group">
+                <label for="quantidade_horas">Quantidade de Horas *</label>
+                <input type="number" id="quantidade_horas" name="quantidade_horas" 
+                       step="0.5" min="0.5" required 
+                       placeholder="Ex: 2.5"
+                       oninput="calcularValorTotal()">
+                <small style="color: #999;">Valor total será calculado automaticamente</small>
+            </div>
+            
+            <div id="valor-total-preview" class="info-box" style="display: none; background: #d4edda; border-color: #28a745;">
+                <strong>💰 Valor Total do Atendimento:</strong> R$ <span id="valor-calculado">0,00</span>
+            </div>
+            
+            <div class="form-group">
+                <label for="historico">Histórico do Atendimento *</label>
+                <textarea id="historico" name="historico" required 
+                          placeholder="Descreva o atendimento realizado..."></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn-secondary" onclick="fecharModal()">Cancelar</button>
+                <button type="submit" class="btn-primary" id="submitBtn">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const fornecedorId = {{ fornecedor.id }};
+const valorHoraFornecedor = {{ fornecedor.valor_hora_homem }};
+let atendimentoEditando = null;
+</script>
+{% endblock %}
+
+{% block page_scripts %}
+let filtroMes = '';
+
+function aplicarFiltros() {
+    filtroMes = document.getElementById('filtro-mes').value;
+    carregarFornecedoresAtendimentos();
+}
+
+function calcularValorTotal() {
+    const qtdHoras = parseFloat(document.getElementById('quantidade_horas').value) || 0;
+    const valorTotal = qtdHoras * valorHoraFornecedor;
+    
+    if (qtdHoras > 0) {
+        document.getElementById('valor-calculado').textContent = valorTotal.toFixed(2);
+        document.getElementById('valor-total-preview').style.display = 'block';
+    } else {
+        document.getElementById('valor-total-preview').style.display = 'none';
+    }
+}
+
+async function carregarFornecedoresAtendimentos() {
+    const loading = document.getElementById('loading');
+    const content = document.getElementById('content');
+    const tbody = document.getElementById('tbody-fornecedores-atendimentos');
+    const emptyState = document.getElementById('empty-state');
+    
+    loading.style.display = 'block';
+    content.style.display = 'none';
+    
+    try {
+        let url = `/api/fornecedores/${fornecedorId}/atendimentos`;
+        if (filtroMes) {
+            url += `?mes=${filtroMes}`;
+        }
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (!data.success) {
+            alert('Erro: ' + data.message);
+            loading.style.display = 'none';
+            return;
+        }
+        
+        tbody.innerHTML = '';
+        
+        // Atualizar estatísticas
+        document.getElementById('total-atendimentos').textContent = data.total_atendimentos || 0;
+        document.getElementById('total-horas').textContent = (data.total_horas || 0).toFixed(1) + 'h';
+        document.getElementById('total-valor').textContent = 'R$ ' + (data.total_valor || 0).toFixed(2);
+        
+        if (!data.atendimentos || data.atendimentos.length === 0) {
+            emptyState.style.display = 'block';
+        } else {
+            emptyState.style.display = 'none';
+            
+            data.atendimentos.forEach(atend => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${atend.data_atendimento}</strong></td>
+                    <td>${atend.hora_atendimento}</td>
+                    <td>${atend.nome_representante}</td>
+                    <td><strong>${atend.quantidade_horas.toFixed(1)}h</strong></td>
+                    <td>R$ ${atend.valor_hora.toFixed(2)}</td>
+                    <td><strong style="color: #27ae60;">R$ ${atend.valor_total.toFixed(2)}</strong></td>
+                    <td>
+                        <div class="historico-preview" title="${atend.historico}">
+                            ${atend.historico}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-icon btn-edit" onclick='editarAtendimento(${JSON.stringify(atend).replace(/'/g, "&#39;")})' title="Editar">
+                                ✏️
+                            </button>
+                            <button class="btn-icon btn-delete" onclick="excluirAtendimento(${atend.id}, '${atend.data_atendimento}')" title="Excluir">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        loading.style.display = 'none';
+        content.style.display = 'block';
+    } catch (error) {
+        console.error('Erro ao carregar atendimentos:', error);
+        loading.style.display = 'none';
+        alert('Erro ao carregar atendimentos');
+    }
+}
+
+function abrirModal() {
+    atendimentoEditando = null;
+    document.getElementById('modal-title').textContent = 'Novo Atendimento';
+    document.getElementById('fornecedorAtendimentoForm').reset();
+    document.getElementById('valor-total-preview').style.display = 'none';
+    
+    // Definir data e hora atuais
+    const hoje = new Date();
+    document.getElementById('data_atendimento').value = hoje.toISOString().split('T')[0];
+    document.getElementById('hora_atendimento').value = hoje.toTimeString().slice(0, 5);
+    
+    document.getElementById('modal').style.display = 'block';
+}
+
+function editarAtendimento(atendimento) {
+    atendimentoEditando = atendimento;
+    document.getElementById('modal-title').textContent = 'Editar Atendimento';
+    
+    document.getElementById('data_atendimento').value = atendimento.data_atendimento_iso;
+    document.getElementById('hora_atendimento').value = atendimento.hora_atendimento;
+    document.getElementById('nome_representante').value = atendimento.nome_representante;
+    document.getElementById('quantidade_horas').value = atendimento.quantidade_horas;
+    document.getElementById('historico').value = atendimento.historico;
+    
+    calcularValorTotal();
+    
+    document.getElementById('modal').style.display = 'block';
+}
+
+function fecharModal() {
+    document.getElementById('modal').style.display = 'none';
+    atendimentoEditando = null;
+}
+
+async function excluirAtendimento(id, data) {
+    if (!confirm(`Deseja realmente excluir o atendimento do dia ${data}?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/fornecedores/${fornecedorId}/atendimentos/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message);
+            carregarFornecedoresAtendimentos();
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Erro ao excluir atendimento:', error);
+        alert('Erro ao excluir atendimento');
+    }
+}
+
+document.getElementById('fornecedorAtendimentoForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Salvando...';
+    
+    const formData = {
+        data_atendimento: document.getElementById('data_atendimento').value,
+        hora_atendimento: document.getElementById('hora_atendimento').value,
+        nome_representante: document.getElementById('nome_representante').value,
+        quantidade_horas: parseFloat(document.getElementById('quantidade_horas').value),
+        historico: document.getElementById('historico').value
+    };
+    
+    try {
+        const url = atendimentoEditando 
+            ? `/api/fornecedores/${fornecedorId}/atendimentos/${atendimentoEditando.id}`
+            : `/api/fornecedores/${fornecedorId}/atendimentos`;
+        const method = atendimentoEditando ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message);
+            fecharModal();
+            carregarFornecedoresAtendimentos();
+        } else {
+            alert('Erro: ' + data.message);
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    } catch (error) {
+        console.error('Erro ao salvar atendimento:', error);
+        alert('Erro ao salvar atendimento');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+});
+
+// Fechar modal ao clicar fora
+window.onclick = function(event) {
+    const modal = document.getElementById('modal');
+    if (event.target == modal) {
+        fecharModal();
+    }
+}
+
+// Definir mês atual como padrão
+document.addEventListener('DOMContentLoaded', () => {
+    const hoje = new Date();
+    const mesAtual = hoje.toISOString().slice(0, 7);
+    document.getElementById('filtro-mes').value = mesAtual;
+    filtroMes = mesAtual;
+    
+    carregarFornecedoresAtendimentos();
+});
+{% endblock %}

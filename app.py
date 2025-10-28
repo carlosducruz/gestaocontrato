@@ -28,15 +28,31 @@ class Fornecedor(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
    
     def to_dict(self):
+        # Calcular estatísticas do mês atual
+        from datetime import datetime
+        mes_atual = datetime.now().month
+        ano_atual = datetime.now().year
+        
+        atendimentos_mes = AtendimentoProntaResposta.query.filter(
+            AtendimentoProntaResposta.fornecedor_id == self.id,
+            db.extract('month', AtendimentoProntaResposta.data_atendimento) == mes_atual,
+            db.extract('year', AtendimentoProntaResposta.data_atendimento) == ano_atual
+        ).all()
+        
+        quantidade_atendimentos_mes = len(atendimentos_mes)
+        valor_total_mes = sum(float(a.valor_total) for a in atendimentos_mes)
+        
         return {
             'id': self.id,
             'nome_empresa': self.nome_empresa,
             'cnpj': self.cnpj,
             'pronta_resposta': self.pronta_resposta,
             'valor_hora_homem': float(self.valor_hora_homem),
-            'ativo': self.ativo
+            'ativo': self.ativo,
+            'quantidade_atendimentos_mes': quantidade_atendimentos_mes,
+            'valor_total_mes': valor_total_mes
         }
-    
+
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -360,6 +376,42 @@ class Atendimento(db.Model):
             'mes_ano': self.data_atendimento.strftime('%m/%Y')
         }
 
+
+
+class AtendimentoProntaResposta(db.Model):
+    __tablename__ = 'atendimentos_pronta_resposta'
+    id = db.Column(db.Integer, primary_key=True)
+    fornecedor_id = db.Column(db.Integer, db.ForeignKey('fornecedores.id'), nullable=False)
+    data_atendimento = db.Column(db.Date, nullable=False)
+    hora_atendimento = db.Column(db.Time, nullable=False)
+    historico = db.Column(db.Text, nullable=False)
+    nome_representante = db.Column(db.String(200), nullable=False)
+    quantidade_horas = db.Column(db.Numeric(5, 2), nullable=False)  # Quantidade de horas trabalhadas
+    valor_hora = db.Column(db.Numeric(10, 2), nullable=False)  # Valor da hora no momento do atendimento
+    valor_total = db.Column(db.Numeric(10, 2), nullable=False)  # quantidade_horas * valor_hora
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relacionamento com fornecedor
+    fornecedor = db.relationship('Fornecedor', backref='atendimentos_pronta_resposta')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'fornecedor_id': self.fornecedor_id,
+            'fornecedor_nome': self.fornecedor.nome_empresa if self.fornecedor else None,
+            'data_atendimento': self.data_atendimento.strftime('%d/%m/%Y'),
+            'data_atendimento_iso': self.data_atendimento.strftime('%Y-%m-%d'),
+            'hora_atendimento': self.hora_atendimento.strftime('%H:%M'),
+            'historico': self.historico,
+            'nome_representante': self.nome_representante,
+            'quantidade_horas': float(self.quantidade_horas),
+            'valor_hora': float(self.valor_hora),
+            'valor_total': float(self.valor_total),
+            'mes_ano': self.data_atendimento.strftime('%m/%Y')
+        }
+
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -385,6 +437,7 @@ def index():
     if current_user.is_authenticated:
         return redirect(url_for('home'))
     return redirect(url_for('login'))
+
 
 @app.route('/login')
 def login():
@@ -552,6 +605,142 @@ def api_fornecedores_deletar(id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
+    
+@app.route('/fornecedores/<int:id>/fornecedores_atendimentos')
+@login_required
+def fornecedores_atendimentos(id):
+    fornecedor = Fornecedor.query.get_or_404(id)
+    if not fornecedor.pronta_resposta:
+        flash('Este fornecedor não possui serviço de pronta resposta')
+        return redirect(url_for('fornecedores'))
+    return render_template('fornecedores_atendimentos.html', user=current_user, fornecedor=fornecedor)
+
+
+ 
+@app.route('/api/fornecedores/<int:fornecedor_id>/atendimentos', methods=['GET'])
+@login_required
+def api_fornecedor_atendimentos_listar(fornecedor_id):
+    fornecedor = Fornecedor.query.get_or_404(fornecedor_id)
+    
+    if not fornecedor.pronta_resposta:
+        return jsonify({'success': False, 'message': 'Fornecedor não possui serviço de pronta resposta'}), 400
+    
+    mes = request.args.get('mes')  # Formato: YYYY-MM
+    
+    query = AtendimentoProntaResposta.query.filter_by(fornecedor_id=fornecedor_id)
+    
+    if mes:
+        ano, mes_num = mes.split('-')
+        query = query.filter(
+            db.extract('year', AtendimentoProntaResposta.data_atendimento) == int(ano),
+            db.extract('month', AtendimentoProntaResposta.data_atendimento) == int(mes_num)
+        )
+    
+    atendimentos = query.order_by(AtendimentoProntaResposta.data_atendimento.desc()).all()
+    
+    # Calcular totais
+    total_atendimentos = len(atendimentos)
+    total_horas = sum(float(a.quantidade_horas) for a in atendimentos)
+    total_valor = sum(float(a.valor_total) for a in atendimentos)
+    
+    return jsonify({
+        'success': True,
+        'fornecedor': fornecedor.to_dict(),
+        'atendimentos': [a.to_dict() for a in atendimentos],
+        'total_atendimentos': total_atendimentos,
+        'total_horas': total_horas,
+        'total_valor': total_valor
+    })
+
+@app.route('/api/fornecedores/<int:fornecedor_id>/atendimentos', methods=['POST'])
+@login_required
+def api_fornecedor_atendimentos_criar(fornecedor_id):
+    fornecedor = Fornecedor.query.get_or_404(fornecedor_id)
+    
+    if not fornecedor.pronta_resposta:
+        return jsonify({'success': False, 'message': 'Fornecedor não possui serviço de pronta resposta'}), 400
+    
+    data = request.get_json()
+    
+    try:
+        quantidade_horas = float(data['quantidade_horas'])
+        valor_hora = float(fornecedor.valor_hora_homem)
+        valor_total = quantidade_horas * valor_hora
+        
+        atendimento = AtendimentoProntaResposta(
+            fornecedor_id=fornecedor_id,
+            data_atendimento=datetime.strptime(data['data_atendimento'], '%Y-%m-%d').date(),
+            hora_atendimento=datetime.strptime(data['hora_atendimento'], '%H:%M').time(),
+            historico=data['historico'],
+            nome_representante=data['nome_representante'],
+            quantidade_horas=quantidade_horas,
+            valor_hora=valor_hora,
+            valor_total=valor_total
+        )
+        
+        db.session.add(atendimento)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Atendimento registrado com sucesso',
+            'atendimento': atendimento.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/fornecedores/<int:fornecedor_id>/atendimentos/<int:atendimento_id>', methods=['PUT'])
+@login_required
+def api_fornecedor_atendimentos_atualizar(fornecedor_id, atendimento_id):
+    atendimento = AtendimentoProntaResposta.query.filter_by(
+        id=atendimento_id, 
+        fornecedor_id=fornecedor_id
+    ).first_or_404()
+    
+    data = request.get_json()
+    
+    try:
+        quantidade_horas = float(data['quantidade_horas'])
+        # Usar o valor da hora atual do fornecedor
+        valor_hora = float(atendimento.fornecedor.valor_hora_homem)
+        valor_total = quantidade_horas * valor_hora
+        
+        atendimento.data_atendimento = datetime.strptime(data['data_atendimento'], '%Y-%m-%d').date()
+        atendimento.hora_atendimento = datetime.strptime(data['hora_atendimento'], '%H:%M').time()
+        atendimento.historico = data['historico']
+        atendimento.nome_representante = data['nome_representante']
+        atendimento.quantidade_horas = quantidade_horas
+        atendimento.valor_hora = valor_hora
+        atendimento.valor_total = valor_total
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Atendimento atualizado com sucesso',
+            'atendimento': atendimento.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/fornecedores/<int:fornecedor_id>/atendimentos/<int:atendimento_id>', methods=['DELETE'])
+@login_required
+def api_fornecedor_atendimentos_deletar(fornecedor_id, atendimento_id):
+    atendimento = AtendimentoProntaResposta.query.filter_by(
+        id=atendimento_id, 
+        fornecedor_id=fornecedor_id
+    ).first_or_404()
+    
+    try:
+        db.session.delete(atendimento)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Atendimento excluído com sucesso'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+    
     
 @app.route('/profile')
 @login_required

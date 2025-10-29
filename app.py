@@ -1740,20 +1740,35 @@ def api_faltas_listar(id):
 @login_required
 def api_faltas_criar(id):
     funcionario = Funcionario.query.get_or_404(id)
-    data = request.get_json()
-    
     try:
+        if request.content_type and request.content_type.startswith('multipart/form-data'):
+            data = request.form
+            file = request.files.get('arquivo_atestado')
+            arquivo_atestado = None
+            if file and file.filename:
+                filename = secure_filename(file.filename)
+                dest_folder = os.path.join(app.config['UPLOAD_FOLDER'], 'documentos')
+                os.makedirs(dest_folder, exist_ok=True)
+                file.save(os.path.join(dest_folder, filename))
+                arquivo_atestado = filename
+        else:
+            data = request.get_json()
+            arquivo_atestado = data.get('arquivo_atestado')
+
+        # Corrigir atestada para booleano
+        atestada = data.get('atestada', False)
+        if isinstance(atestada, str):
+            atestada = atestada.lower() in ['true', '1', 'on']
+
         falta = Falta(
             funcionario_id=id,
             data_falta=datetime.strptime(data['data_falta'], '%Y-%m-%d').date(),
-            atestada=data.get('atestada', False),
+            atestada=atestada,
             motivo=data.get('motivo'),
-            arquivo_atestado=data.get('arquivo_atestado')
+            arquivo_atestado=arquivo_atestado
         )
-        
         db.session.add(falta)
         db.session.commit()
-        
         return jsonify({
             'success': True,
             'message': 'Falta registrada com sucesso',
@@ -1767,17 +1782,33 @@ def api_faltas_criar(id):
 @login_required
 def api_faltas_atualizar(funcionario_id, falta_id):
     falta = Falta.query.filter_by(id=falta_id, funcionario_id=funcionario_id).first_or_404()
-    data = request.get_json()
-    
     try:
+        if request.content_type and request.content_type.startswith('multipart/form-data'):
+            data = request.form
+            file = request.files.get('arquivo_atestado')
+            arquivo_atestado = falta.arquivo_atestado
+            if file and file.filename:
+                filename = secure_filename(file.filename)
+                dest_folder = os.path.join(app.config['UPLOAD_FOLDER'], 'documentos')
+                os.makedirs(dest_folder, exist_ok=True)
+                file.save(os.path.join(dest_folder, filename))
+                arquivo_atestado = filename
+        else:
+            data = request.get_json()
+            arquivo_atestado = data.get('arquivo_atestado', falta.arquivo_atestado)
+
+        # Corrigir atestada para booleano
+        atestada = data.get('atestada', False)
+        if isinstance(atestada, str):
+            atestada = atestada.lower() in ['true', '1', 'on']
+
         falta.data_falta = datetime.strptime(data['data_falta'], '%Y-%m-%d').date()
-        falta.atestada = data.get('atestada', False)
+        falta.atestada = atestada
         falta.motivo = data.get('motivo')
-        if data.get('arquivo_atestado'):
-            falta.arquivo_atestado = data['arquivo_atestado']
-        
+        falta.arquivo_atestado = arquivo_atestado
+
         db.session.commit()
-        
+
         return jsonify({
             'success': True,
             'message': 'Falta atualizada com sucesso',

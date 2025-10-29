@@ -556,8 +556,11 @@ function editarFalta(falta) {
 }
 
 function verArquivo(arquivo) {
-    // Abre o arquivo em uma nova aba
-    window.open(arquivo, '_blank');
+    // Abre o arquivo de atestado usando a rota de download
+    if (arquivo) {
+        const url = `/api/sac/download/documentos/${encodeURIComponent(arquivo)}`;
+        window.open(url, '_blank');
+    }
 }
 
 async function excluirFalta(id, data) {
@@ -586,39 +589,38 @@ async function excluirFalta(id, data) {
 
 document.getElementById('faltaForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
+
     const submitBtn = document.getElementById('submitBtn');
     const originalText = submitBtn.textContent;
     submitBtn.disabled = true;
     submitBtn.textContent = 'Salvando...';
-    
+
     const faltaId = document.getElementById('falta_id').value;
-    const formData = {
-        data_falta: document.getElementById('data_falta').value,
-        atestada: document.getElementById('atestada').checked,
-        motivo: document.getElementById('motivo').value,
-        arquivo_atestado: arquivoBase64
-    };
-    
+    let url = `/api/funcionarios/${funcionarioId}/faltas`;
+    let method = 'POST';
+    if (modoEdicao && faltaId) {
+        url = `/api/funcionarios/${funcionarioId}/faltas/${faltaId}`;
+        method = 'PUT';
+    }
+
+    // Monta o FormData para upload direto
+    const formData = new FormData();
+    formData.append('data_falta', document.getElementById('data_falta').value);
+    formData.append('atestada', document.getElementById('atestada').checked);
+    formData.append('motivo', document.getElementById('motivo').value);
+    const arquivoInput = document.getElementById('arquivo');
+    if (arquivoInput.files.length > 0) {
+        formData.append('arquivo_atestado', arquivoInput.files[0]);
+    }
+
     try {
-        let url = `/api/funcionarios/${funcionarioId}/faltas`;
-        let method = 'POST';
-        
-        if (modoEdicao && faltaId) {
-            url = `/api/funcionarios/${funcionarioId}/faltas/${faltaId}`;
-            method = 'PUT';
-        }
-        
         const response = await fetch(url, {
             method: method,
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData)
+            body: formData
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             showAlert(data.message, 'success');
             fecharModal();

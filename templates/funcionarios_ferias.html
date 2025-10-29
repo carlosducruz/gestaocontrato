@@ -1,0 +1,643 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Programação de Férias - {{ funcionario.nome }}{% endblock %}
+
+{% block page_title %}Programação de Férias{% endblock %}
+
+{% block page_styles %}
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #667eea;
+    text-decoration: none;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.info-card {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-label {
+    color: #7f8c8d;
+    font-size: 13px;
+    margin-bottom: 5px;
+}
+
+.info-value {
+    color: #2c3e50;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.toolbar {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.btn-primary {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(26,188,156,0.4);
+}
+
+.table-container {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    background: #f8f9fa;
+}
+
+th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 2px solid #dee2e6;
+}
+
+td {
+    padding: 15px;
+    border-bottom: 1px solid #dee2e6;
+    color: #555;
+}
+
+tr:hover {
+    background: #f8f9fa;
+}
+
+.badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.badge-warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.badge-secondary {
+    background: #e2e3e5;
+    color: #383d41;
+}
+
+.badge-info {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-icon {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s;
+}
+
+.btn-edit {
+    background: #3498db;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #2980b9;
+}
+
+.btn-delete {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #c0392b;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-header h2 {
+    color: #2c3e50;
+    font-size: 20px;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #555;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #1abc9c;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.alert {
+    padding: 12px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    display: none;
+}
+
+.alert-error {
+    background: #fee;
+    color: #c33;
+    border: 1px solid #fcc;
+}
+
+.alert-success {
+    background: #efe;
+    color: #3c3;
+    border: 1px solid #cfc;
+}
+
+.dias-info {
+    background: #f8f9fa;
+    padding: 10px 15px;
+    border-radius: 5px;
+    margin-top: 5px;
+    font-size: 14px;
+    color: #666;
+}
+{% endblock %}
+
+{% block page_content %}
+<a href="/funcionarios" class="back-link">← Voltar para lista</a>
+
+<div class="info-card">
+    <h3 style="margin-bottom: 20px; color: #2c3e50;">Informações do Funcionário</h3>
+    <div class="info-grid">
+        <div class="info-item">
+            <div class="info-label">Nome</div>
+            <div class="info-value">{{ funcionario.nome }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">RE</div>
+            <div class="info-value">{{ funcionario.re }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Cargo</div>
+            <div class="info-value">{{ funcionario.cargo }}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Total de Períodos</div>
+            <div class="info-value" id="total-periodos">0</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Total de Dias</div>
+            <div class="info-value" id="total-dias">0</div>
+        </div>
+    </div>
+</div>
+
+<div class="toolbar">
+    <h3 style="color: #2c3e50;">Programação de Férias</h3>
+    <button class="btn-primary" onclick="abrirModal()">+ Programar Férias</button>
+</div>
+
+<div id="alert" class="alert"></div>
+
+<div class="table-container">
+    <div id="loading" style="text-align: center; padding: 40px; color: #999;">Carregando...</div>
+    <div id="content" style="display: none;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Data Início</th>
+                    <th>Data Retorno</th>
+                    <th>Dias</th>
+                    <th>Status</th>
+                    <th>Observação</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-ferias">
+            </tbody>
+        </table>
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <p>Nenhum período de férias programado</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modal-title">Programar Férias</h2>
+            <button class="close-modal" onclick="fecharModal()">×</button>
+        </div>
+        
+        <form id="feriasForm">
+            <input type="hidden" id="ferias_id">
+            
+            <div class="form-group">
+                <label for="data_inicio">Data de Início *</label>
+                <input type="date" id="data_inicio" required onchange="calcularDias()">
+            </div>
+            
+            <div class="form-group">
+                <label for="data_fim">Data de Retorno *</label>
+                <input type="date" id="data_fim" required onchange="calcularDias()">
+            </div>
+            
+            <div class="form-group">
+                <label for="quantidade_dias">Quantidade de Dias</label>
+                <input type="number" id="quantidade_dias" readonly>
+                <div class="dias-info" id="dias-info">
+                    A quantidade de dias será calculada automaticamente
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="observacao">Observação</label>
+                <textarea id="observacao" rows="3" placeholder="Informações adicionais sobre as férias..."></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary" id="submitBtn">Programar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+const funcionarioId = {{ funcionario.id }};
+let modoEdicao = false;
+</script>
+{% endblock %}
+
+{% block page_scripts %}
+function showAlert(message, type) {
+    const alert = document.getElementById('alert');
+    alert.textContent = message;
+    alert.className = `alert alert-${type}`;
+    alert.style.display = 'block';
+    setTimeout(() => {
+        alert.style.display = 'none';
+    }, 5000);
+}
+
+function calcularDias() {
+    const dataInicio = document.getElementById('data_inicio').value;
+    const dataFim = document.getElementById('data_fim').value;
+    const diasInfo = document.getElementById('dias-info');
+    
+    if (dataInicio && dataFim) {
+        const inicio = new Date(dataInicio);
+        const fim = new Date(dataFim);
+        
+        if (fim <= inicio) {
+            diasInfo.innerHTML = '<span style="color: #e74c3c;">Data de retorno deve ser posterior à data de início</span>';
+            document.getElementById('quantidade_dias').value = '';
+            return;
+        }
+        
+        // Calcula a diferença em dias
+        const diffTime = fim - inicio;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        document.getElementById('quantidade_dias').value = diffDays;
+        diasInfo.innerHTML = `Período de ${diffDays} dia${diffDays !== 1 ? 's' : ''}`;
+    }
+}
+
+function getStatusBadge(dataRetorno) {
+    const hoje = new Date();
+    const retorno = new Date(dataRetorno);
+    
+    if (retorno < hoje) {
+        return '<span class="badge badge-secondary">Concluído</span>';
+    } else if (retorno.toDateString() === hoje.toDateString()) {
+        return '<span class="badge badge-info">Retorna Hoje</span>';
+    } else {
+        return '<span class="badge badge-success">Programado</span>';
+    }
+}
+
+function abrirModal(ferias = null) {
+    modoEdicao = ferias !== null;
+    document.getElementById('modal-title').textContent = modoEdicao ? 'Editar Férias' : 'Programar Férias';
+    document.getElementById('submitBtn').textContent = modoEdicao ? 'Atualizar' : 'Programar';
+    
+    if (modoEdicao) {
+        document.getElementById('ferias_id').value = ferias.id;
+        document.getElementById('data_inicio').value = ferias.data_inicio_iso;
+        document.getElementById('data_fim').value = ferias.data_fim_iso;
+        document.getElementById('quantidade_dias').value = ferias.dias;
+        document.getElementById('observacao').value = ferias.observacao || '';
+        
+        const diasInfo = document.getElementById('dias-info');
+        diasInfo.innerHTML = `Período de ${ferias.dias} dia${ferias.dias !== 1 ? 's' : ''}`;
+    } else {
+        document.getElementById('feriasForm').reset();
+        document.getElementById('ferias_id').value = '';
+        document.getElementById('quantidade_dias').value = '';
+        document.getElementById('dias-info').innerHTML = 'A quantidade de dias será calculada automaticamente';
+    }
+    
+    document.getElementById('modal').classList.add('show');
+}
+
+function fecharModal() {
+    document.getElementById('modal').classList.remove('show');
+    document.getElementById('feriasForm').reset();
+    modoEdicao = false;
+}
+
+async function carregarFerias() {
+    const loading = document.getElementById('loading');
+    const content = document.getElementById('content');
+    const tbody = document.getElementById('tbody-ferias');
+    const emptyState = document.getElementById('empty-state');
+    
+    loading.style.display = 'block';
+    content.style.display = 'none';
+    
+    try {
+        const response = await fetch(`/api/funcionarios/${funcionarioId}/ferias`);
+        const data = await response.json();
+        
+        tbody.innerHTML = '';
+        
+        // Calcular totais
+        const totalPeriodos = data.ferias.length;
+        const totalDias = data.ferias.reduce((sum, f) => sum + parseInt(f.dias), 0);
+        
+        document.getElementById('total-periodos').textContent = totalPeriodos;
+        document.getElementById('total-dias').textContent = totalDias;
+        
+        if (data.ferias.length === 0) {
+            emptyState.style.display = 'block';
+        } else {
+            emptyState.style.display = 'none';
+            
+            data.ferias.forEach(ferias => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${ferias.data_inicio}</strong></td>
+                    <td><strong>${ferias.data_fim}</strong></td>
+                    <td><strong>${ferias.dias} dias</strong></td>
+                    <td>${getStatusBadge(ferias.data_fim_iso)}</td>
+                    <td>${ferias.observacao || '-'}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-icon btn-edit" onclick='editarFerias(${JSON.stringify(ferias)})' title="Editar">
+                                ✏️
+                            </button>
+                            <button class="btn-icon btn-delete" onclick="excluirFerias(${ferias.id}, '${ferias.data_inicio}')" title="Excluir">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        loading.style.display = 'none';
+        content.style.display = 'block';
+    } catch (error) {
+        console.error('Erro ao carregar férias:', error);
+        loading.style.display = 'none';
+        alert('Erro ao carregar programação de férias');
+    }
+}
+
+function editarFerias(ferias) {
+    abrirModal(ferias);
+}
+
+async function excluirFerias(id, data) {
+    if (!confirm(`Deseja realmente excluir as férias programadas para ${data}?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/funcionarios/${funcionarioId}/ferias/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert(data.message, 'success');
+            carregarFerias();
+        } else {
+            showAlert('Erro: ' + data.message, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao excluir férias:', error);
+        showAlert('Erro ao excluir programação de férias', 'error');
+    }
+}
+
+document.getElementById('feriasForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Salvando...';
+    
+    const feriasId = document.getElementById('ferias_id').value;
+    const quantidadeDias = document.getElementById('quantidade_dias').value;
+    
+    if (!quantidadeDias || quantidadeDias <= 0) {
+        showAlert('Verifique as datas informadas', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        return;
+    }
+    
+    const formData = {
+        data_inicio: document.getElementById('data_inicio').value,
+        data_fim: document.getElementById('data_fim').value,
+        dias: quantidadeDias,
+        observacao: document.getElementById('observacao').value
+    };
+    
+    try {
+        let url = `/api/funcionarios/${funcionarioId}/ferias`;
+        let method = 'POST';
+        
+        if (modoEdicao && feriasId) {
+            url = `/api/funcionarios/${funcionarioId}/ferias/${feriasId}`;
+            method = 'PUT';
+        }
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert(data.message, 'success');
+            fecharModal();
+            carregarFerias();
+        } else {
+            showAlert(data.message, 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    } catch (error) {
+        console.error('Erro ao salvar férias:', error);
+        showAlert('Erro ao salvar programação de férias', 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+});
+
+// Fechar modal ao clicar fora
+document.getElementById('modal').addEventListener('click', (e) => {
+    if (e.target.id === 'modal') {
+        fecharModal();
+    }
+});
+
+// Carregar ao iniciar
+document.addEventListener('DOMContentLoaded', carregarFerias);
+{% endblock %}

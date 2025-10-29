@@ -2,7 +2,8 @@
 
 {% block title %}Home{% endblock %}
 
-{% block page_title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard
+{% endblock %}
 
 {% block page_styles %}
 .stats-grid {
@@ -52,40 +53,46 @@
 {% endblock %}
 
 {% block page_content %}
+<p style="color: #7f8c8d;">Bem-vindo ao seu dashboard! Aqui você pode gerenciar suas atividades e visualizar estatísticas importantes.</p>
+<br/>
+<div style="display:flex; align-items:center; gap:20px; margin-bottom:20px;">
+    <label for="filtroMesAno" style="font-weight:600; color:#2c3e50;">Filtrar por Mês/Ano:</label>
+    <input type="month" id="filtroMesAno" value="{{ now.strftime('%Y-%m') }}" style="padding:8px; font-size:16px; border-radius:5px; border:1px solid #ddd;">
+</div>
+
 <div class="stats-grid">
     <div class="stat-card">
         <h3>Usuários Ativos</h3>
-        <div class="value">{{ usuarios_ativos }}</div>
+        <div class="value" id="stat-usuarios-ativos">{{ usuarios_ativos }}</div>
         <div class="trend">&nbsp;</div>
     </div>
     <div class="stat-card">
         <h3>Clientes Ativos</h3>
-        <div class="value">{{ clientes_ativos }}</div>
+        <div class="value" id="stat-clientes-ativos">{{ clientes_ativos }}</div>
         <div class="trend">&nbsp;</div>
     </div>
     <div class="stat-card">
-    <h3>Atendimentos - {{ now.strftime('%m/%Y') }}</h3>
-        <div class="value">{{ atendimentos_mes }}</div>
+        <h3>Atendimentos - <span id="stat-mesano">{{ now.strftime('%m/%Y') }}</span></h3>
+        <div class="value" id="stat-atendimentos-mes">{{ atendimentos_mes }}</div>
         <div class="trend">&nbsp;</div>
     </div>
     <div class="stat-card">
-        <h3>Ocorrências - {{ now.strftime('%m/%Y') }}</h3>
-        <div class="value">{{ ocorrencias_sistemicas_mes }}</div>
+        <h3>Ocorrências - <span id="stat-mesano-oc">{{ now.strftime('%m/%Y') }}</span></h3>
+        <div class="value" id="stat-ocorrencias-mes">{{ ocorrencias_sistemicas_mes }}</div>
         <div class="trend">&nbsp;</div>
     </div>
     <div class="stat-card">
-        <h3>Pronta Resposta - {{ now.strftime('%m/%Y') }}</h3>
-        <div class="value">{{ atendimentos_pr_mes }}</div>
+        <h3>Pronta Resposta - <span id="stat-mesano-pr">{{ now.strftime('%m/%Y') }}</span></h3>
+        <div class="value" id="stat-pronta-resposta-mes">{{ atendimentos_pr_mes }}</div>
         <div class="trend">&nbsp;</div>
     </div>
 </div>
 
 <div class="content-card">
     <h2>Atividades Recentes</h2>
-    <p style="color: #7f8c8d;">Bem-vindo ao seu dashboard! Aqui você pode gerenciar suas atividades e visualizar estatísticas importantes.</p>
-
-    <div style="margin-top:30px;">
-        <h3>Resumo de Atendimentos por Cliente ({{ now.strftime('%m/%Y') }})</h3>
+ <br/>
+     <div class="content-card" id="card-resumo-atendimentos">
+        <h2>Resumo de Atendimentos por Cliente (<span id="resumo-mesano">{{ now.strftime('%m/%Y') }}</span>)</h2>
         <table style="width:100%; border-collapse:collapse; margin-top:10px;">
             <thead>
                 <tr style="background:#f4f4f4;">
@@ -96,7 +103,7 @@
                     <th style="padding:8px; border:1px solid #eee; text-align:right;">Maior Tempo (min)</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="tbody-resumo-clientes">
                 {% for cliente in resumo_clientes %}
                 <tr>
                     <td style="padding:8px; border:1px solid #eee;">{{ cliente.nome }}</td>
@@ -111,5 +118,98 @@
             </tbody>
         </table>
     </div>
+    <br/>
+    <div class="content-card" id="card-resumo-ocorrencias">
+        <h2>Resumo de Ocorrências Sistêmicas (<span id="ocorrencias-mesano">{{ now.strftime('%m/%Y') }}</span>)</h2>
+        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+            <thead>
+                <tr style="background:#f4f4f4;">
+                    <th style="padding:8px; border:1px solid #eee; text-align:left;">Status</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:right;">Total</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-resumo-ocorrencias">
+                {% if resumo_ocorrencias %}
+                    {% for item in resumo_ocorrencias %}
+                    <tr>
+                        <td style="padding:8px; border:1px solid #eee;">{{ item.status }}</td>
+                        <td style="padding:8px; border:1px solid #eee; text-align:right;">{{ item.total }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="2" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Nenhuma ocorrência registrada neste mês.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    {% block page_scripts %}
+    <script>
+    async function atualizarDashboard(mesAno) {
+        // Chama API para buscar dados filtrados
+        try {
+            const response = await fetch(`/api/dashboard?mes=${mesAno}`);
+            const data = await response.json();
+            // Atualiza stat-cards
+            document.getElementById('stat-mesano').textContent = mesAno.split('-').reverse().join('/');
+            document.getElementById('stat-mesano-oc').textContent = mesAno.split('-').reverse().join('/');
+            document.getElementById('stat-mesano-pr').textContent = mesAno.split('-').reverse().join('/');
+            document.getElementById('stat-usuarios-ativos').textContent = data.usuarios_ativos;
+            document.getElementById('stat-clientes-ativos').textContent = data.clientes_ativos;
+            document.getElementById('stat-atendimentos-mes').textContent = data.atendimentos_mes;
+            document.getElementById('stat-ocorrencias-mes').textContent = data.ocorrencias_sistemicas_mes;
+            document.getElementById('stat-pronta-resposta-mes').textContent = data.atendimentos_pr_mes;
+            document.getElementById('resumo-mesano').textContent = mesAno.split('-').reverse().join('/');
+            document.getElementById('ocorrencias-mesano').textContent = mesAno.split('-').reverse().join('/');
+            // Atualiza tabela de resumo
+            const tbody = document.getElementById('tbody-resumo-clientes');
+            tbody.innerHTML = '';
+            if (data.resumo_clientes && data.resumo_clientes.length > 0) {
+                data.resumo_clientes.forEach(cliente => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="padding:8px; border:1px solid #eee;">${cliente.nome}</td>
+                        <td style="padding:8px; border:1px solid #eee; text-align:right;">${cliente.qtd}</td>
+                        <td style="padding:8px; border:1px solid #eee; text-align:right;">${cliente.total_tempo}</td>
+                        <td style="padding:8px; border:1px solid #eee; text-align:right;">${cliente.media_tempo}</td>
+                        <td style="padding:8px; border:1px solid #eee; text-align:right;">${cliente.maior_tempo}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="5" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Nenhum atendimento registrado este mês.</td></tr>`;
+            }
+
+            // Atualiza tabela de resumo de ocorrências sistêmicas
+            const tbodyOc = document.getElementById('tbody-resumo-ocorrencias');
+            tbodyOc.innerHTML = '';
+            if (data.resumo_ocorrencias && data.resumo_ocorrencias.length > 0) {
+                data.resumo_ocorrencias.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="padding:8px; border:1px solid #eee;">${item.status}</td>
+                        <td style="padding:8px; border:1px solid #eee; text-align:right;">${item.total}</td>
+                    `;
+                    tbodyOc.appendChild(tr);
+                });
+            } else {
+                tbodyOc.innerHTML = `<tr><td colspan="2" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Nenhuma ocorrência registrada neste mês.</td></tr>`;
+            }
+        } catch (error) {
+            alert('Erro ao buscar dados do dashboard');
+        }
+    }
+
+    document.getElementById('filtroMesAno').addEventListener('change', function() {
+        atualizarDashboard(this.value);
+    });
+
+    // Chama ao carregar a página
+    window.addEventListener('DOMContentLoaded', function() {
+        const mesAno = document.getElementById('filtroMesAno').value;
+        atualizarDashboard(mesAno);
+    });
+    </script>
+    {% endblock %}
 </div>
 {% endblock %}

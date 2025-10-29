@@ -183,6 +183,14 @@ tr:hover {
     padding: 40px;
     color: #999;
 }
+.btn-vacation {
+    background: #1abc9c;
+    color: white;
+}
+
+.btn-vacation:hover {
+    background: #16a085;
+}
 {% endblock %}
 
 {% block page_content %}
@@ -207,6 +215,7 @@ tr:hover {
                     <th>Admissão</th>
                     <th>Tempo na Empresa</th>
                     <th>Salário</th>
+                    <th>Férias</th>
                     <th>Status</th>
                     <th>Ações</th>
                 </tr>
@@ -260,41 +269,51 @@ async function carregarFuncionarios() {
             
             data.funcionarios.forEach(func => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><strong>${func.re}</strong></td>
-                    <td>${func.nome}</td>
-                    <td>${func.cargo}</td>
-                    <td>${func.data_admissao}</td>
-                    <td>${func.tempo_empresa}</td>
-                    <td>R$ ${parseFloat(func.salario_atual).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
-                    <td>
-                        <span class="badge ${func.ativo ? 'badge-success' : 'badge-danger'}">
-                            ${func.ativo ? 'Ativo' : 'Inativo'}
-                        </span>
-                    </td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="btn-icon btn-edit" onclick="editar(${func.id})" title="Editar">
-                                ✏️
-                            </button>
-                            <button class="btn-icon btn-history" onclick="verEvolucao(${func.id})" title="Evolução Salarial">
-                                📊
-                            </button>
-                            <button class="btn-icon btn-absence" onclick="verFaltas(${func.id})" title="Controle de Faltas">
-                                📅
-                            </button>
-                            <button class="btn-icon btn-dayoff" onclick="verFolgas(${func.id})" title="Folgas Trabalhadas">
-                                💼
-                            </button>
-                            <button class="btn-icon btn-warning" onclick="verOcorrencias(${func.id})" title="Ocorrências Disciplinares">
-                                ⚠️
-                            </button>
-                            <button class="btn-icon btn-delete" onclick="excluir(${func.id}, '${func.nome}')" title="Excluir">
-                                🗑️
-                            </button>
-                        </div>
-                    </td>
-                `;
+                // Próxima férias: exibe apenas períodos cujo data_fim é maior que hoje
+                let proximaFerias = '';
+                if (func.ferias && func.ferias.length > 0) {
+                    const hoje = new Date();
+                            let futuras = [];
+                            for (let i = 0; i < func.ferias.length; i++) {
+                                let ferias = func.ferias[i];
+                                let fim = new Date(ferias.data_fim_iso || ferias.data_fim);
+                                if (fim >= hoje) {
+                                    futuras.push(ferias);
+                                }
+                            }
+                            if (futuras.length > 0) {
+                                futuras.sort(function(a, b) {
+                                    return new Date(a.data_fim_iso || a.data_fim) - new Date(b.data_fim_iso || b.data_fim);
+                                });
+                                proximaFerias = (futuras[0].data_inicio || futuras[0].data_inicio_iso) + ' a ' + (futuras[0].data_fim || futuras[0].data_fim_iso);
+                            } else {
+                                proximaFerias = '';
+                            }
+                }
+                tr.innerHTML =
+                    '<td><strong>' + func.re + '</strong></td>' +
+                    '<td>' + func.nome + '</td>' +
+                    '<td>' + func.cargo + '</td>' +
+                    '<td>' + func.data_admissao + '</td>' +
+                    '<td>' + func.tempo_empresa + '</td>' +
+                    '<td>R$ ' + parseFloat(func.salario_atual).toLocaleString('pt-BR', {minimumFractionDigits: 2}) + '</td>' +
+                    '<td>' + (proximaFerias ? "<span class='badge badge-info'>" + proximaFerias + "</span>" : '-') + '</td>' +
+                    '<td>' +
+                        '<span class="badge ' + (func.ativo ? 'badge-success' : 'badge-danger') + '">' +
+                            (func.ativo ? 'Ativo' : 'Inativo') +
+                        '</span>' +
+                    '</td>' +
+                    '<td>' +
+                        '<div class="action-buttons">' +
+                            '<button class="btn-icon btn-edit" onclick="editar(' + func.id + ')" title="Editar">✏️</button>' +
+                            '<button class="btn-icon btn-history" onclick="verEvolucao(' + func.id + ')" title="Evolução Salarial">📊</button>' +
+                            '<button class="btn-icon btn-absence" onclick="verFaltas(' + func.id + ')" title="Controle de Faltas">📅</button>' +
+                            '<button class="btn-icon btn-dayoff" onclick="verFolgas(' + func.id + ')" title="Folgas Trabalhadas">💼</button>' +
+                            '<button class="btn-icon btn-warning" onclick="verOcorrencias(' + func.id + ')" title="Ocorrências Disciplinares">⚠️</button>' +
+                            '<button class="btn-icon btn-vacation" onclick="programarFerias(' + func.id + ')" title="Programar Férias">🏖️</button>' +
+                            '<button class="btn-icon btn-delete" onclick="excluir(' + func.id + ', \'' + func.nome.replace(/'/g, "&#39;") + '\')" title="Excluir">🗑️</button>' +
+                        '</div>' +
+                    '</td>';
                 tbody.appendChild(tr);
             });
         }
@@ -306,6 +325,10 @@ async function carregarFuncionarios() {
         loading.style.display = 'none';
         alert('Erro ao carregar funcionários');
     }
+}
+
+function programarFerias(id) {
+    window.location.href = `/funcionarios/${id}/ferias`;
 }
 
 function editar(id) {

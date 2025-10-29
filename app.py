@@ -56,6 +56,35 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 # Modelos -------------------------------------------------------------------------------------------------------
+# Modelo Ferias
+class Ferias(db.Model):
+    __tablename__ = 'ferias'
+    id = db.Column(db.Integer, primary_key=True)
+    funcionario_id = db.Column(db.Integer, db.ForeignKey('funcionarios.id'), nullable=False)
+    data_inicio = db.Column(db.Date, nullable=False)
+    data_fim = db.Column(db.Date, nullable=False)
+    dias = db.Column(db.Integer, nullable=False)
+    abono = db.Column(db.Boolean, default=False)
+    observacao = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    funcionario = db.relationship('Funcionario', backref='ferias', lazy=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'funcionario_id': self.funcionario_id,
+            'data_inicio': self.data_inicio.strftime('%d/%m/%Y'),
+            'data_inicio_iso': self.data_inicio.strftime('%Y-%m-%d'),
+            'data_fim': self.data_fim.strftime('%d/%m/%Y'),
+            'data_fim_iso': self.data_fim.strftime('%Y-%m-%d'),
+            'dias': self.dias,
+            'abono': self.abono,
+            'observacao': self.observacao
+        }
+
+
 class Sac(db.Model):
     __tablename__ = 'sac'
     id = db.Column(db.Integer, primary_key=True)
@@ -741,10 +770,94 @@ def ocorrencias_sistemicas_editar(id):
     ocorrencia = OcorrenciaSistemica.query.get_or_404(id)
     return render_template('ocorrencias_sistemicas_form.html', user=current_user, ocorrencia=ocorrencia)
 
+# Página de férias do funcionário
+@app.route('/funcionarios/<int:id>/ferias')
+@login_required
+def funcionarios_ferias(id):
+    funcionario = Funcionario.query.get_or_404(id)
+    return render_template('funcionarios_ferias.html', user=current_user, funcionario=funcionario)
+# API: Listar férias do funcionário
+@app.route('/api/funcionarios/<int:id>/ferias', methods=['GET'])
+@login_required
+def api_ferias_listar(id):
+    ferias = Ferias.query.filter_by(funcionario_id=id).order_by(Ferias.data_inicio.desc()).all()
+    return jsonify({
+        'success': True,
+        'ferias': [f.to_dict() for f in ferias]
+    })
 
 
 
 # Routes das APIs ------------------------------------------------------------------------------------------------
+
+# API: Criar férias
+@app.route('/api/funcionarios/<int:id>/ferias', methods=['POST'])
+@login_required
+def api_ferias_criar(id):
+    from datetime import datetime
+    # Aceita tanto JSON quanto form-data
+    data = request.get_json(silent=True) or request.form
+    try:
+        data_inicio_str = data.get('data_inicio')
+        data_fim_str = data.get('data_fim')
+        if not data_inicio_str or not data_fim_str:
+            return jsonify({'success': False, 'message': 'Campos data_inicio e data_fim são obrigatórios.'}), 400
+        data_inicio = datetime.strptime(data_inicio_str, '%Y-%m-%d').date()
+        data_fim = datetime.strptime(data_fim_str, '%Y-%m-%d').date()
+        dias = int(data.get('dias', 0))
+        abono = str(data.get('abono', 'False')).lower() in ['true', '1', 'on']
+        observacao = data.get('observacao')
+        ferias = Ferias(
+            funcionario_id=id,
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            dias=dias,
+            abono=abono,
+            observacao=observacao
+        )
+        db.session.add(ferias)
+        db.session.commit()
+        return jsonify({'success': True, 'ferias': ferias.to_dict()})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+# API: Atualizar férias
+@app.route('/api/funcionarios/<int:funcionario_id>/ferias/<int:ferias_id>', methods=['PUT'])
+@login_required
+def api_ferias_atualizar(funcionario_id, ferias_id):
+    from datetime import datetime
+    ferias = Ferias.query.get_or_404(ferias_id)
+    # Aceita tanto JSON quanto form-data
+    data = request.get_json(silent=True) or request.form
+    try:
+        data_inicio_str = data.get('data_inicio')
+        data_fim_str = data.get('data_fim')
+        if not data_inicio_str or not data_fim_str:
+            return jsonify({'success': False, 'message': 'Campos data_inicio e data_fim são obrigatórios.'}), 400
+        ferias.data_inicio = datetime.strptime(data_inicio_str, '%Y-%m-%d').date()
+        ferias.data_fim = datetime.strptime(data_fim_str, '%Y-%m-%d').date()
+        ferias.dias = int(data.get('dias', ferias.dias))
+        ferias.abono = str(data.get('abono', ferias.abono)).lower() in ['true', '1', 'on']
+        ferias.observacao = data.get('observacao', ferias.observacao)
+        db.session.commit()
+        return jsonify({'success': True, 'ferias': ferias.to_dict()})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+
+# API: Deletar férias
+@app.route('/api/funcionarios/<int:funcionario_id>/ferias/<int:ferias_id>', methods=['DELETE'])
+@login_required
+def api_ferias_deletar(funcionario_id, ferias_id):
+    ferias = Ferias.query.get_or_404(ferias_id)
+    try:
+        db.session.delete(ferias)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 400
+    
+
+
 @app.route('/api/sac', methods=['GET'])
 @login_required
 def api_sac_listar():
@@ -1577,9 +1690,15 @@ def api_funcionarios_listar():
         query = query.filter_by(ativo=False)
     
     funcionarios = query.order_by(Funcionario.nome).all()
+    funcionarios_json = []
+    for f in funcionarios:
+        d = f.to_dict()
+        # Adiciona lista de férias (ordenada por data_inicio)
+        d['ferias'] = [ferias.to_dict() for ferias in sorted(f.ferias, key=lambda x: x.data_inicio)]
+        funcionarios_json.append(d)
     return jsonify({
         'success': True,
-        'funcionarios': [f.to_dict() for f in funcionarios]
+        'funcionarios': funcionarios_json
     })
 
 @app.route('/api/funcionarios/<int:id>', methods=['GET'])
@@ -2539,7 +2658,100 @@ def api_regioes_deletar(id):
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
+# API Dashboard - Estatísticas filtradas por mês/ano
+@app.route('/api/dashboard')
+@login_required
+def api_dashboard():
+    mes = request.args.get('mes')  # formato YYYY-MM
+    from datetime import datetime
+    if mes:
+        try:
+            ano, mes_num = mes.split('-')
+            ano = int(ano)
+            mes_num = int(mes_num)
+        except Exception:
+            now = datetime.now()
+            ano = now.year
+            mes_num = now.month
+    else:
+        now = datetime.now()
+        ano = now.year
+        mes_num = now.month
 
+    # Usuários e clientes ativos (não dependem do mês)
+    usuarios_ativos = User.query.count()
+    clientes_ativos = Cliente.query.filter_by(ativo=True).count()
+
+    # Atendimentos
+    atendimentos_mes = Atendimento.query.filter(
+        db.extract('month', Atendimento.data_atendimento) == mes_num,
+        db.extract('year', Atendimento.data_atendimento) == ano
+    ).count()
+
+    # Ocorrências Sistêmicas
+    ocorrencias_sistemicas_mes = OcorrenciaSistemica.query.filter(
+        db.extract('month', OcorrenciaSistemica.data_ocorrencia) == mes_num,
+        db.extract('year', OcorrenciaSistemica.data_ocorrencia) == ano
+    ).count()
+
+    # Atendimentos Pronta Resposta
+    atendimentos_pr_mes = AtendimentoProntaResposta.query.filter(
+        db.extract('month', AtendimentoProntaResposta.data_atendimento) == mes_num,
+        db.extract('year', AtendimentoProntaResposta.data_atendimento) == ano
+    ).count()
+
+    # Resumo de atendimentos por cliente
+    atendimentos = Atendimento.query.filter(
+        db.extract('month', Atendimento.data_atendimento) == mes_num,
+        db.extract('year', Atendimento.data_atendimento) == ano
+    ).all()
+    from collections import defaultdict
+    clientes_stats = defaultdict(lambda: {'nome': '', 'qtd': 0, 'total_tempo': 0, 'tempos': []})
+    for a in atendimentos:
+        cliente = a.endereco.cliente if a.endereco and a.endereco.cliente else None
+        if cliente:
+            cid = cliente.id
+            clientes_stats[cid]['nome'] = cliente.nome
+            clientes_stats[cid]['qtd'] += 1
+            tempo = a.calcular_tempo_atendimento() if hasattr(a, 'calcular_tempo_atendimento') else 0
+            clientes_stats[cid]['total_tempo'] += tempo
+            clientes_stats[cid]['tempos'].append(tempo)
+    resumo_clientes = []
+    for cid, stats in clientes_stats.items():
+        media_tempo = int(stats['total_tempo'] / stats['qtd']) if stats['qtd'] > 0 else 0
+        maior_tempo = max(stats['tempos']) if stats['tempos'] else 0
+        resumo_clientes.append({
+            'nome': stats['nome'],
+            'qtd': stats['qtd'],
+            'total_tempo': stats['total_tempo'],
+            'media_tempo': media_tempo,
+            'maior_tempo': maior_tempo
+        })
+
+    # Resumo de Ocorrências Sistêmicas por status
+    from sqlalchemy import func
+    resumo_ocorrencias_query = db.session.query(
+        OcorrenciaSistemica.status,
+        func.count(OcorrenciaSistemica.id)
+    ).filter(
+        db.extract('month', OcorrenciaSistemica.data_ocorrencia) == mes_num,
+        db.extract('year', OcorrenciaSistemica.data_ocorrencia) == ano
+    ).group_by(OcorrenciaSistemica.status).all()
+
+    resumo_ocorrencias = [
+        {'status': status, 'total': total}
+        for status, total in resumo_ocorrencias_query
+    ]
+
+    return jsonify({
+        'usuarios_ativos': usuarios_ativos,
+        'clientes_ativos': clientes_ativos,
+        'atendimentos_mes': atendimentos_mes,
+        'ocorrencias_sistemicas_mes': ocorrencias_sistemicas_mes,
+        'atendimentos_pr_mes': atendimentos_pr_mes,
+        'resumo_clientes': resumo_clientes,
+        'resumo_ocorrencias': resumo_ocorrencias
+    })
 
 # Inicializar banco de dados
 def init_db():

@@ -1,8 +1,10 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 from datetime import datetime
+
 import os
 
 app = Flask(__name__)
@@ -10,12 +12,125 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://appuser:apppass123@172.24.167.206:5432/appdb')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Configuração do upload de arquivos
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max
+ALLOWED_DOCUMENT_EXTENSIONS = {'pdf', 'doc', 'docx'}
+ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov'}
+
+# Criar pasta de uploads se não existir
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'documentos'), exist_ok=True)
+os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'videos'), exist_ok=True)
+
+def allowed_document_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_DOCUMENT_EXTENSIONS
+
+def allowed_video_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_VIDEO_EXTENSIONS
+
+def save_uploaded_file(file, file_type):
+    if file and file.filename:
+        if file_type == 'documento' and allowed_document_file(file.filename):
+            folder = 'documentos'
+        elif file_type == 'video' and allowed_video_file(file.filename):
+            folder = 'videos'
+        else:
+            return None
+        
+        # Gerar nome único para o arquivo
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_')
+        filename = secure_filename(timestamp + file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], folder, filename)
+        
+        file.save(filepath)
+        return filename
+    
+    return None
+
 db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# Models
+# Modelos -------------------------------------------------------------------------------------------------------
+class Sac(db.Model):
+    __tablename__ = 'sac'
+    id = db.Column(db.Integer, primary_key=True)
+    cliente_id = db.Column(db.Integer, db.ForeignKey('clientes.id'), nullable=False)
+    endereco_id = db.Column(db.Integer, db.ForeignKey('enderecos.id'), nullable=True)
+    data_ocorrencia = db.Column(db.Date, nullable=False)
+    hora_ocorrencia = db.Column(db.Time, nullable=False)
+    tipo_contato = db.Column(db.String(50), nullable=False)  # Telefone, Email, Presencial, WhatsApp
+    canal_entrada = db.Column(db.String(50), nullable=False)  # Site, Telefone, Email, App, Rede Social
+    assunto = db.Column(db.String(200), nullable=False)
+    descricao = db.Column(db.Text, nullable=False)
+    categoria = db.Column(db.String(100), nullable=False)  # Reclamação, Elogio, Sugestão, Dúvida, Solicitação
+    prioridade = db.Column(db.String(20), nullable=False)  # Baixa, Média, Alta, Urgente
+    status = db.Column(db.String(50), nullable=False, default='Aberto')  # Aberto, Em Andamento, Resolvido, Fechado
+    responsavel = db.Column(db.String(200), nullable=True)
+    solucao = db.Column(db.Text, nullable=True)
+    data_resolucao = db.Column(db.Date, nullable=True)
+    hora_resolucao = db.Column(db.Time, nullable=True)
+    satisfacao = db.Column(db.String(20), nullable=True)  # Muito Insatisfeito, Insatisfeito, Neutro, Satisfeito, Muito Satisfeito
+    feedback = db.Column(db.Text, nullable=True)
+    arquivo_anexo = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relacionamentos
+    cliente = db.relationship('Cliente', backref='sac_ocorrencias')
+    endereco = db.relationship('Endereco', backref='sac_ocorrencias')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'cliente_id': self.cliente_id,
+            'cliente_nome': self.cliente.nome if self.cliente else 'N/A',
+            'endereco_id': self.endereco_id,
+            'endereco_descricao': f"{self.endereco.logradouro}, {self.endereco.numero} - {self.endereco.bairro}" if self.endereco else 'Não especificado',
+            'data_ocorrencia': self.data_ocorrencia.strftime('%d/%m/%Y'),
+            'data_ocorrencia_iso': self.data_ocorrencia.strftime('%Y-%m-%d'),
+            'hora_ocorrencia': self.hora_ocorrencia.strftime('%H:%M'),
+            'tipo_contato': self.tipo_contato,
+            'canal_entrada': self.canal_entrada,
+            'assunto': self.assunto,
+            'descricao': self.descricao,
+            'categoria': self.categoria,
+            'prioridade': self.prioridade,
+            'status': self.status,
+            'responsavel': self.responsavel,
+            'solucao': self.solucao,
+            'data_resolucao': self.data_resolucao.strftime('%d/%m/%Y') if self.data_resolucao else None,
+            'data_resolucao_iso': self.data_resolucao.strftime('%Y-%m-%d') if self.data_resolucao else None,
+            'hora_resolucao': self.hora_resolucao.strftime('%H:%M') if self.hora_resolucao else None,
+            'satisfacao': self.satisfacao,
+            'feedback': self.feedback,
+            'arquivo_anexo': self.arquivo_anexo,
+            'created_at': self.created_at.strftime('%d/%m/%Y %H:%M'),
+            'tempo_resolucao': self.calcular_tempo_resolucao(),
+            'dias_aberto': self.calcular_dias_aberto()
+        }
+    
+    def calcular_tempo_resolucao(self):
+        if self.data_resolucao and self.status in ['Resolvido', 'Fechado']:
+            inicio = datetime.combine(self.data_ocorrencia, self.hora_ocorrencia)
+            fim = datetime.combine(self.data_resolucao, self.hora_resolucao) if self.hora_resolucao else datetime.combine(self.data_resolucao, datetime.min.time())
+            diferenca = fim - inicio
+            return f"{diferenca.days}d {diferenca.seconds//3600}h"
+        return None
+    
+    def calcular_dias_aberto(self):
+        if self.status in ['Aberto', 'Em Andamento']:
+            inicio = datetime.combine(self.data_ocorrencia, self.hora_ocorrencia)
+            fim = datetime.now()
+            diferenca = fim - inicio
+            return diferenca.days
+        return 0
+    
+
 class Fornecedor(db.Model):
     __tablename__ = 'fornecedores'
     id = db.Column(db.Integer, primary_key=True)
@@ -303,6 +418,12 @@ class Endereco(db.Model):
     # Relacionamento com atendimentos
     atendimentos = db.relationship('Atendimento', backref='endereco', lazy=True, cascade='all, delete-orphan')
     
+    # Rondas Virtuais
+    possui_rondas_virtuais = db.Column(db.Boolean, default=False)
+    qtd_cameras_rondas = db.Column(db.Integer, nullable=True)
+    frequencia_rondas = db.Column(db.String(20), nullable=True)  # '1hora', '2horas', '3horas'
+    periodo_recebimento_rondas = db.Column(db.String(20), nullable=True)  # 'diario', 'semanal', 'quinzenal', 'mensal'
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -332,7 +453,11 @@ class Endereco(db.Model):
             'periodo_atendimento_personalizado': self.periodo_atendimento_personalizado,
             'locacao_sistema': self.locacao_sistema,
             'ativo': self.ativo,
-            'endereco_completo': f"{self.logradouro}, {self.numero} - {self.bairro}, {self.cidade}/{self.estado}"
+            'endereco_completo': f"{self.logradouro}, {self.numero} - {self.bairro}, {self.cidade}/{self.estado}",
+            'possui_rondas_virtuais': self.possui_rondas_virtuais,
+            'qtd_cameras_rondas': self.qtd_cameras_rondas,
+            'frequencia_rondas': self.frequencia_rondas,
+            'periodo_recebimento_rondas': self.periodo_recebimento_rondas
         }
 
 class Atendimento(db.Model):
@@ -412,11 +537,97 @@ class AtendimentoProntaResposta(db.Model):
         }
 
 
+class OcorrenciaSistemica(db.Model):
+    __tablename__ = 'ocorrencias_sistemicas'
+    id = db.Column(db.Integer, primary_key=True)
+    endereco_id = db.Column(db.Integer, db.ForeignKey('enderecos.id'), nullable=False)
+    data_ocorrencia = db.Column(db.Date, nullable=False)
+    hora_ocorrencia = db.Column(db.Time, nullable=False)
+    observacao = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(50), nullable=False, default='Reportada')  # Reportada, Em Análise, Em Correção, Resolvida, Fechada
+    prioridade = db.Column(db.String(20), nullable=False, default='Média')  # Baixa, Média, Alta, Crítica
+    responsavel = db.Column(db.String(200), nullable=True)
+    solucao = db.Column(db.Text, nullable=True)
+    data_resolucao = db.Column(db.Date, nullable=True)
+    hora_resolucao = db.Column(db.Time, nullable=True)
+    arquivo_documento = db.Column(db.String(255), nullable=True)
+    arquivo_video = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relacionamento com endereço
+    endereco = db.relationship('Endereco', backref='ocorrencias_sistemicas')
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'cliente_id': self.endereco.cliente_id if self.endereco else None,
+            'endereco_id': self.endereco_id,
+            'endereco_descricao': f"{self.endereco.cliente.nome} - {self.endereco.logradouro}, {self.endereco.numero}" if self.endereco else 'N/A',
+            'cliente_nome': self.endereco.cliente.nome if self.endereco and self.endereco.cliente else 'N/A',
+            'data_ocorrencia': self.data_ocorrencia.strftime('%d/%m/%Y'),
+            'data_ocorrencia_iso': self.data_ocorrencia.strftime('%Y-%m-%d'),
+            'hora_ocorrencia': self.hora_ocorrencia.strftime('%H:%M'),
+            'observacao': self.observacao,
+            'status': self.status,
+            'prioridade': self.prioridade,
+            'responsavel': self.responsavel,
+            'solucao': self.solucao,
+            'data_resolucao': self.data_resolucao.strftime('%d/%m/%Y') if self.data_resolucao else None,
+            'data_resolucao_iso': self.data_resolucao.strftime('%Y-%m-%d') if self.data_resolucao else None,
+            'hora_resolucao': self.hora_resolucao.strftime('%H:%M') if self.hora_resolucao else None,
+            'arquivo_documento': self.arquivo_documento,
+            'arquivo_video': self.arquivo_video,
+            'created_at': self.created_at.strftime('%d/%m/%Y %H:%M'),
+            'tempo_resolucao': self.calcular_tempo_resolucao(),
+            'dias_aberto': self.calcular_dias_aberto()
+        }
+    
+    def calcular_tempo_resolucao(self):
+        if self.data_resolucao and self.status in ['Resolvida', 'Fechada']:
+            inicio = datetime.combine(self.data_ocorrencia, self.hora_ocorrencia)
+            fim = datetime.combine(self.data_resolucao, self.hora_resolucao) if self.hora_resolucao else datetime.combine(self.data_resolucao, datetime.min.time())
+            diferenca = fim - inicio
+            return f"{diferenca.days}d {diferenca.seconds//3600}h"
+        return None
+    
+    def calcular_dias_aberto(self):
+        if self.status in ['Reportada', 'Em Análise', 'Em Correção']:
+            inicio = datetime.combine(self.data_ocorrencia, self.hora_ocorrencia)
+            fim = datetime.now()
+            diferenca = fim - inicio
+            return diferenca.days
+        return 0
+    
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# Routes - Páginas
+
+# Routes das Páginas --------------------------------------------------------------------------------------------
+@app.route('/sac')
+@login_required
+def sac():
+    return render_template('sac.html', user=current_user)
+
+@app.route('/sac/novo')
+@login_required
+def sac_novo():
+    return render_template('sac_form.html', user=current_user, ocorrencia=None)
+
+@app.route('/sac/<int:id>/editar')
+@login_required
+def sac_editar(id):
+    ocorrencia = Sac.query.get_or_404(id)
+    return render_template('sac_form.html', user=current_user, ocorrencia=ocorrencia)
+
+@app.route('/sac/<int:id>/detalhes')
+@login_required
+def sac_detalhes(id):
+    ocorrencia = Sac.query.get_or_404(id)
+    return render_template('sac_detalhes.html', user=current_user, ocorrencia=ocorrencia)
+
 @app.route('/fornecedores')
 @login_required
 def fornecedores():
@@ -492,16 +703,458 @@ def home():
         db.extract('month', Atendimento.data_atendimento) == now.month,
         db.extract('year', Atendimento.data_atendimento) == now.year
     ).count()
+
+    ocorrencias_sistemicas_mes = OcorrenciaSistemica.query.filter(
+        db.extract('month', OcorrenciaSistemica.data_ocorrencia) == now.month,
+        db.extract('year', OcorrenciaSistemica.data_ocorrencia) == now.year
+    ).count()
+
+    atendimentos_pr_mes = AtendimentoProntaResposta.query.filter(
+        db.extract('month', AtendimentoProntaResposta.data_atendimento) == now.month,
+        db.extract('year', AtendimentoProntaResposta.data_atendimento) == now.year
+    ).count()
     return render_template(
         'home.html',
         user=current_user,
         usuarios_ativos=usuarios_ativos,
         clientes_ativos=clientes_ativos,
         atendimentos_mes=atendimentos_mes,
+        ocorrencias_sistemicas_mes=ocorrencias_sistemicas_mes,
+        atendimentos_pr_mes=atendimentos_pr_mes,
         now=now,
         resumo_clientes=resumo_clientes
     )
 
+@app.route('/ocorrencias-sistemicas')
+@login_required
+def ocorrencias_sistemicas():
+    return render_template('ocorrencias_sistemicas.html', user=current_user)
+
+@app.route('/ocorrencias-sistemicas/novo')
+@login_required
+def ocorrencias_sistemicas_novo():
+    return render_template('ocorrencias_sistemicas_form.html', user=current_user, ocorrencia=None)
+
+@app.route('/ocorrencias-sistemicas/<int:id>/editar')
+@login_required
+def ocorrencias_sistemicas_editar(id):
+    ocorrencia = OcorrenciaSistemica.query.get_or_404(id)
+    return render_template('ocorrencias_sistemicas_form.html', user=current_user, ocorrencia=ocorrencia)
+
+
+
+
+# Routes das APIs ------------------------------------------------------------------------------------------------
+@app.route('/api/sac', methods=['GET'])
+@login_required
+def api_sac_listar():
+    cliente_id = request.args.get('cliente_id')
+    status = request.args.get('status')
+    prioridade = request.args.get('prioridade')
+    categoria = request.args.get('categoria')
+    mes = request.args.get('mes')
+    
+    query = Sac.query
+    
+    if cliente_id:
+        query = query.filter_by(cliente_id=cliente_id)
+    if status and status != 'todos':
+        query = query.filter_by(status=status)
+    if prioridade and prioridade != 'todos':
+        query = query.filter_by(prioridade=prioridade)
+    if categoria and categoria != 'todos':
+        query = query.filter_by(categoria=categoria)
+    if mes:
+        ano, mes_num = mes.split('-')
+        query = query.filter(
+            db.extract('year', Sac.data_ocorrencia) == int(ano),
+            db.extract('month', Sac.data_ocorrencia) == int(mes_num)
+        )
+    
+    ocorrencias = query.order_by(Sac.data_ocorrencia.desc(), Sac.hora_ocorrencia.desc()).all()
+    
+    # Buscar clientes para select
+    clientes = Cliente.query.filter_by(ativo=True).order_by(Cliente.nome).all()
+    enderecos = Endereco.query.filter_by(ativo=True).join(Cliente).order_by(Cliente.nome).all()
+    
+    # Estatísticas
+    total_aberto = Sac.query.filter_by(status='Aberto').count()
+    total_andamento = Sac.query.filter_by(status='Em Andamento').count()
+    total_resolvido = Sac.query.filter_by(status='Resolvido').count()
+    total_urgente = Sac.query.filter_by(prioridade='Urgente', status='Aberto').count()
+    
+    return jsonify({
+        'success': True,
+        'ocorrencias': [o.to_dict() for o in ocorrencias],
+        'clientes': [{'id': c.id, 'nome': c.nome} for c in clientes],
+        'enderecos': [{
+            'id': e.id,
+            'descricao': f"{e.cliente.nome} - {e.logradouro}, {e.numero}",
+            'cliente_id': e.cliente_id,
+            'cliente_nome': e.cliente.nome
+        } for e in enderecos],
+        'estatisticas': {
+            'total_aberto': total_aberto,
+            'total_andamento': total_andamento,
+            'total_resolvido': total_resolvido,
+            'total_urgente': total_urgente
+        }
+    })
+
+@app.route('/api/sac/download/<tipo>/<filename>')
+@login_required
+def api_sac_download(tipo, filename):
+    if tipo not in ['documentos']:
+        return jsonify({'success': False, 'message': 'Tipo inválido'}), 400
+    
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], tipo, secure_filename(filename))
+    
+    if not os.path.exists(filepath):
+        return jsonify({'success': False, 'message': 'Arquivo não encontrado'}), 404
+    
+    return send_file(filepath, as_attachment=True)
+
+@app.route('/api/sac/<int:id>', methods=['GET'])
+@login_required
+def api_sac_obter(id):
+    ocorrencia = Sac.query.get_or_404(id)
+    return jsonify({
+        'success': True,
+        'ocorrencia': ocorrencia.to_dict()
+    })
+
+@app.route('/api/sac', methods=['POST'])
+@login_required
+def api_sac_criar():
+    try:
+        if request.content_type.startswith('application/json'):
+            data = request.get_json()
+            arquivo_anexo = data.get('arquivo_anexo')
+        else:
+            data = request.form
+            arquivo_anexo = save_uploaded_file(request.files.get('arquivo_anexo'), 'documento')
+        
+        ocorrencia = Sac(
+            cliente_id=data['cliente_id'],
+            endereco_id=data.get('endereco_id'),
+            data_ocorrencia=datetime.strptime(data['data_ocorrencia'], '%Y-%m-%d').date(),
+            hora_ocorrencia=datetime.strptime(data['hora_ocorrencia'], '%H:%M').time(),
+            tipo_contato=data['tipo_contato'],
+            canal_entrada=data['canal_entrada'],
+            assunto=data['assunto'],
+            descricao=data['descricao'],
+            categoria=data['categoria'],
+            prioridade=data['prioridade'],
+            status=data.get('status', 'Aberto'),
+            responsavel=data.get('responsavel'),
+            arquivo_anexo=arquivo_anexo
+        )
+        
+        db.session.add(ocorrencia)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Ocorrência SAC registrada com sucesso',
+            'ocorrencia': ocorrencia.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/sac/<int:id>', methods=['PUT'])
+@login_required
+def api_sac_atualizar(id):
+    ocorrencia = Sac.query.get_or_404(id)
+    
+    try:
+        if request.content_type.startswith('application/json'):
+            data = request.get_json()
+        else:
+            data = request.form
+            
+            # Processar upload de novo arquivo
+            novo_arquivo = request.files.get('arquivo_anexo')
+            if novo_arquivo and novo_arquivo.filename:
+                # Remover arquivo antigo se existir
+                if ocorrencia.arquivo_anexo:
+                    old_path = os.path.join(app.config['UPLOAD_FOLDER'], 'documentos', ocorrencia.arquivo_anexo)
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                ocorrencia.arquivo_anexo = save_uploaded_file(novo_arquivo, 'documento')
+        
+        ocorrencia.cliente_id = data.get('cliente_id', ocorrencia.cliente_id)
+        ocorrencia.endereco_id = data.get('endereco_id', ocorrencia.endereco_id)
+        ocorrencia.data_ocorrencia = datetime.strptime(data['data_ocorrencia'], '%Y-%m-%d').date()
+        ocorrencia.hora_ocorrencia = datetime.strptime(data['hora_ocorrencia'], '%H:%M').time()
+        ocorrencia.tipo_contato = data.get('tipo_contato', ocorrencia.tipo_contato)
+        ocorrencia.canal_entrada = data.get('canal_entrada', ocorrencia.canal_entrada)
+        ocorrencia.assunto = data.get('assunto', ocorrencia.assunto)
+        ocorrencia.descricao = data.get('descricao', ocorrencia.descricao)
+        ocorrencia.categoria = data.get('categoria', ocorrencia.categoria)
+        ocorrencia.prioridade = data.get('prioridade', ocorrencia.prioridade)
+        ocorrencia.status = data.get('status', ocorrencia.status)
+        ocorrencia.responsavel = data.get('responsavel', ocorrencia.responsavel)
+        ocorrencia.solucao = data.get('solucao', ocorrencia.solucao)
+        ocorrencia.satisfacao = data.get('satisfacao', ocorrencia.satisfacao)
+        ocorrencia.feedback = data.get('feedback', ocorrencia.feedback)
+        
+        # Se foi resolvido, registrar data/hora de resolução
+        if data.get('status') in ['Resolvido', 'Fechado'] and not ocorrencia.data_resolucao:
+            ocorrencia.data_resolucao = datetime.now().date()
+            ocorrencia.hora_resolucao = datetime.now().time()
+        
+        # Se voltou para aberto/andamento, limpar data de resolução
+        if data.get('status') in ['Aberto', 'Em Andamento'] and ocorrencia.data_resolucao:
+            ocorrencia.data_resolucao = None
+            ocorrencia.hora_resolucao = None
+        
+        if request.content_type.startswith('application/json'):
+            if data.get('arquivo_anexo') is not None:
+                ocorrencia.arquivo_anexo = data['arquivo_anexo']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Ocorrência SAC atualizada com sucesso',
+            'ocorrencia': ocorrencia.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/sac/<int:id>', methods=['DELETE'])
+@login_required
+def api_sac_deletar(id):
+    ocorrencia = Sac.query.get_or_404(id)
+    
+    try:
+        # Remover arquivo físico se existir
+        if ocorrencia.arquivo_anexo:
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], 'documentos', ocorrencia.arquivo_anexo)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        
+        db.session.delete(ocorrencia)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Ocorrência SAC excluída com sucesso'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/ocorrencias-sistemicas', methods=['GET'])
+@login_required
+def api_ocorrencias_sistemicas_listar():
+    cliente_id = request.args.get('cliente_id')
+    endereco_id = request.args.get('endereco_id')
+    status = request.args.get('status')
+    prioridade = request.args.get('prioridade')
+    mes = request.args.get('mes')
+    
+    query = OcorrenciaSistemica.query
+    
+    if endereco_id:
+        query = query.filter_by(endereco_id=endereco_id)
+    elif cliente_id:
+        # Filtrar por cliente através do endereço
+        query = query.join(Endereco).filter(Endereco.cliente_id == cliente_id)
+    
+    if status and status != 'todos':
+        query = query.filter_by(status=status)
+    
+    if prioridade and prioridade != 'todos':
+        query = query.filter_by(prioridade=prioridade)
+    
+    if mes:
+        ano, mes_num = mes.split('-')
+        query = query.filter(
+            db.extract('year', OcorrenciaSistemica.data_ocorrencia) == int(ano),
+            db.extract('month', OcorrenciaSistemica.data_ocorrencia) == int(mes_num)
+        )
+    
+    ocorrencias = query.order_by(OcorrenciaSistemica.data_ocorrencia.desc(), OcorrenciaSistemica.hora_ocorrencia.desc()).all()
+    
+    # Buscar clientes e endereços para selects
+    clientes = Cliente.query.filter_by(ativo=True).order_by(Cliente.nome).all()
+    enderecos = Endereco.query.filter_by(ativo=True).join(Cliente).order_by(Cliente.nome).all()
+    
+    # Estatísticas
+    total_reportada = OcorrenciaSistemica.query.filter_by(status='Reportada').count()
+    total_analise = OcorrenciaSistemica.query.filter_by(status='Em Análise').count()
+    total_correcao = OcorrenciaSistemica.query.filter_by(status='Em Correção').count()
+    total_resolvida = OcorrenciaSistemica.query.filter_by(status='Resolvida').count()
+    total_critica = OcorrenciaSistemica.query.filter_by(prioridade='Crítica', status='Reportada').count()
+    
+    return jsonify({
+        'success': True,
+        'ocorrencias': [o.to_dict() for o in ocorrencias],
+        'clientes': [{'id': c.id, 'nome': c.nome} for c in clientes],
+        'enderecos': [{
+            'id': e.id,
+            'descricao': f"{e.cliente.nome} - {e.logradouro}, {e.numero} - {e.bairro}",
+            'cliente_id': e.cliente_id,
+            'cliente_nome': e.cliente.nome
+        } for e in enderecos],
+        'estatisticas': {
+            'total_reportada': total_reportada,
+            'total_analise': total_analise,
+            'total_correcao': total_correcao,
+            'total_resolvida': total_resolvida,
+            'total_critica': total_critica
+        }
+    })
+
+@app.route('/api/ocorrencias-sistemicas/<int:id>', methods=['GET'])
+@login_required
+def api_ocorrencias_sistemicas_obter(id):
+    ocorrencia = OcorrenciaSistemica.query.get_or_404(id)
+    return jsonify({
+        'success': True,
+        'ocorrencia': ocorrencia.to_dict()
+    })
+
+@app.route('/api/ocorrencias-sistemicas/download/<tipo>/<filename>')
+@login_required
+def api_ocorrencias_sistemicas_download(tipo, filename):
+    if tipo not in ['documentos', 'videos']:
+        return jsonify({'success': False, 'message': 'Tipo inválido'}), 400
+    
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], tipo, secure_filename(filename))
+    
+    if not os.path.exists(filepath):
+        return jsonify({'success': False, 'message': 'Arquivo não encontrado'}), 404
+    
+    return send_file(filepath, as_attachment=True)
+@app.route('/api/ocorrencias-sistemicas', methods=['POST'])
+@login_required
+def api_ocorrencias_sistemicas_criar():
+    try:
+        if request.content_type.startswith('application/json'):
+            data = request.get_json()
+            arquivo_documento = data.get('arquivo_documento')
+            arquivo_video = data.get('arquivo_video')
+        else:
+            data = request.form
+            arquivo_documento = save_uploaded_file(request.files.get('arquivo_documento'), 'documento')
+            arquivo_video = save_uploaded_file(request.files.get('arquivo_video'), 'video')
+        
+        ocorrencia = OcorrenciaSistemica(
+            endereco_id=data['endereco_id'],
+            data_ocorrencia=datetime.strptime(data['data_ocorrencia'], '%Y-%m-%d').date(),
+            hora_ocorrencia=datetime.strptime(data['hora_ocorrencia'], '%H:%M').time(),
+            observacao=data['observacao'],
+            status=data.get('status', 'Reportada'),
+            prioridade=data.get('prioridade', 'Média'),
+            responsavel=data.get('responsavel'),
+            arquivo_documento=arquivo_documento,
+            arquivo_video=arquivo_video
+        )
+        
+        db.session.add(ocorrencia)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Ocorrência sistêmica registrada com sucesso',
+            'ocorrencia': ocorrencia.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/ocorrencias-sistemicas/<int:id>', methods=['PUT'])
+@login_required
+def api_ocorrencias_sistemicas_atualizar(id):
+    ocorrencia = OcorrenciaSistemica.query.get_or_404(id)
+    
+    try:
+        if request.content_type.startswith('application/json'):
+            data = request.get_json()
+        else:
+            data = request.form
+            
+            # Processar upload de novos arquivos
+            novo_documento = request.files.get('arquivo_documento')
+            if novo_documento and novo_documento.filename:
+                # Remover arquivo antigo se existir
+                if ocorrencia.arquivo_documento:
+                    old_path = os.path.join(app.config['UPLOAD_FOLDER'], 'documentos', ocorrencia.arquivo_documento)
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                ocorrencia.arquivo_documento = save_uploaded_file(novo_documento, 'documento')
+            
+            novo_video = request.files.get('arquivo_video')
+            if novo_video and novo_video.filename:
+                # Remover arquivo antigo se existir
+                if ocorrencia.arquivo_video:
+                    old_path = os.path.join(app.config['UPLOAD_FOLDER'], 'videos', ocorrencia.arquivo_video)
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                ocorrencia.arquivo_video = save_uploaded_file(novo_video, 'video')
+        
+        ocorrencia.endereco_id = data.get('endereco_id', ocorrencia.endereco_id)
+        ocorrencia.data_ocorrencia = datetime.strptime(data['data_ocorrencia'], '%Y-%m-%d').date()
+        ocorrencia.hora_ocorrencia = datetime.strptime(data['hora_ocorrencia'], '%H:%M').time()
+        ocorrencia.observacao = data.get('observacao', ocorrencia.observacao)
+        ocorrencia.status = data.get('status', ocorrencia.status)
+        ocorrencia.prioridade = data.get('prioridade', ocorrencia.prioridade)
+        ocorrencia.responsavel = data.get('responsavel', ocorrencia.responsavel)
+        ocorrencia.solucao = data.get('solucao', ocorrencia.solucao)
+        
+        # Se foi resolvida, registrar data/hora de resolução
+        if data.get('status') in ['Resolvida', 'Fechada'] and not ocorrencia.data_resolucao:
+            ocorrencia.data_resolucao = datetime.now().date()
+            ocorrencia.hora_resolucao = datetime.now().time()
+        
+        # Se voltou para status anterior, limpar data de resolução
+        if data.get('status') in ['Reportada', 'Em Análise', 'Em Correção'] and ocorrencia.data_resolucao:
+            ocorrencia.data_resolucao = None
+            ocorrencia.hora_resolucao = None
+        
+        if request.content_type.startswith('application/json'):
+            if data.get('arquivo_documento') is not None:
+                ocorrencia.arquivo_documento = data['arquivo_documento']
+            if data.get('arquivo_video') is not None:
+                ocorrencia.arquivo_video = data['arquivo_video']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Ocorrência sistêmica atualizada com sucesso',
+            'ocorrencia': ocorrencia.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+    
+@app.route('/api/ocorrencias-sistemicas/<int:id>', methods=['DELETE'])
+@login_required
+def api_ocorrencias_sistemicas_deletar(id):
+    ocorrencia = OcorrenciaSistemica.query.get_or_404(id)
+    
+    try:
+        # Remover arquivos físicos
+        if ocorrencia.arquivo_documento:
+            doc_path = os.path.join(app.config['UPLOAD_FOLDER'], 'documentos', ocorrencia.arquivo_documento)
+            if os.path.exists(doc_path):
+                os.remove(doc_path)
+        
+        if ocorrencia.arquivo_video:
+            video_path = os.path.join(app.config['UPLOAD_FOLDER'], 'videos', ocorrencia.arquivo_video)
+            if os.path.exists(video_path):
+                os.remove(video_path)
+        
+        db.session.delete(ocorrencia)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Ocorrência sistêmica excluída com sucesso'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+    
 
 @app.route('/api/fornecedores', methods=['GET'])
 @login_required
@@ -1523,7 +2176,11 @@ def api_enderecos_criar(cliente_id):
             periodo_atendimento=data['periodo_atendimento'],
             periodo_atendimento_personalizado=data.get('periodo_atendimento_personalizado'),
             locacao_sistema=data.get('locacao_sistema', False),
-            ativo=data.get('ativo', True)
+            ativo=data.get('ativo', True),
+            possui_rondas_virtuais=data.get('possui_rondas_virtuais', False),
+            qtd_cameras_rondas=data.get('qtd_cameras_rondas'),
+            frequencia_rondas=data.get('frequencia_rondas'),
+            periodo_recebimento_rondas=data.get('periodo_recebimento_rondas')
         )
         
         db.session.add(endereco)
@@ -1570,7 +2227,10 @@ def api_enderecos_atualizar(cliente_id, endereco_id):
         endereco.periodo_atendimento_personalizado = data.get('periodo_atendimento_personalizado')
         endereco.locacao_sistema = data.get('locacao_sistema', False)
         endereco.ativo = data.get('ativo', endereco.ativo)
-        
+        endereco.possui_rondas_virtuais = data.get('possui_rondas_virtuais', False)
+        endereco.qtd_cameras_rondas = data.get('qtd_cameras_rondas')
+        endereco.frequencia_rondas = data.get('frequencia_rondas')
+        endereco.periodo_recebimento_rondas = data.get('periodo_recebimento_rondas')
         db.session.commit()
         
         return jsonify({

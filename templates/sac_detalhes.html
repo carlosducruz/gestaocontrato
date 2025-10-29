@@ -1,0 +1,650 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Detalhes da Ocorrência SAC - {{ ocorrencia.assunto }}{% endblock %}
+
+{% block page_title %}Detalhes da Ocorrência SAC{% endblock %}
+
+{% block page_styles %}
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #667eea;
+    text-decoration: none;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.details-card {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    max-width: 1000px;
+    margin-bottom: 20px;
+}
+
+.section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.section h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.info-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.info-value {
+    color: #2c3e50;
+    font-size: 15px;
+}
+
+.info-value.large {
+    font-size: 16px;
+    line-height: 1.5;
+}
+
+.badge {
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: inline-block;
+}
+
+.badge-priority-urgente {
+    background: #fee;
+    color: #e74c3c;
+    border: 1px solid #fcc;
+}
+
+.badge-priority-alta {
+    background: #fef5e7;
+    color: #f39c12;
+    border: 1px solid #fde3b9;
+}
+
+.badge-priority-media {
+    background: #e8f4fd;
+    color: #3498db;
+    border: 1px solid #b8daff;
+}
+
+.badge-priority-baixa {
+    background: #eefbf3;
+    color: #27ae60;
+    border: 1px solid #c3e6cb;
+}
+
+.badge-status-aberto {
+    background: #e8f4fd;
+    color: #3498db;
+    border: 1px solid #b8daff;
+}
+
+.badge-status-andamento {
+    background: #fef5e7;
+    color: #f39c12;
+    border: 1px solid #fde3b9;
+}
+
+.badge-status-resolvido {
+    background: #eefbf3;
+    color: #27ae60;
+    border: 1px solid #c3e6cb;
+}
+
+.badge-status-fechado {
+    background: #f8f9fa;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+}
+
+.badge-categoria {
+    background: #f8f9fa;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+}
+
+.badge-satisfacao {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+}
+
+.satisfacao-muito-insatisfeito { background: #fee; color: #e74c3c; }
+.satisfacao-insatisfeito { background: #fef5e7; color: #f39c12; }
+.satisfacao-neutro { background: #f8f9fa; color: #6c757d; }
+.satisfacao-satisfeito { background: #e8f4fd; color: #3498db; }
+.satisfacao-muito-satisfeito { background: #eefbf3; color: #27ae60; }
+
+.description-box {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+.solution-box {
+    background: #eefbf3;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #27ae60;
+}
+
+.feedback-box {
+    background: #fff3cd;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #ffc107;
+}
+
+.empty-state {
+    color: #999;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+}
+
+.file-attachment {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+}
+
+.file-icon {
+    font-size: 20px;
+}
+
+.file-info {
+    flex: 1;
+}
+
+.file-name {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.file-download {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 12px;
+}
+
+.file-download:hover {
+    background: #5a6fd8;
+}
+
+.actions-toolbar {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-start;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.btn-edit {
+    background: #3498db;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #2980b9;
+}
+
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-item:last-child {
+    margin-bottom: 0;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -30px;
+    top: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #667eea;
+    border: 3px solid white;
+    box-shadow: 0 0 0 2px #667eea;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    border-left: 3px solid #667eea;
+}
+
+.timeline-date {
+    font-size: 12px;
+    color: #6c757d;
+    margin-bottom: 5px;
+}
+
+.timeline-title {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #6c757d;
+    text-transform: uppercase;
+}
+{% endblock %}
+
+{% block page_content %}
+<a href="/sac" class="back-link">← Voltar para lista</a>
+
+<div class="details-card">
+    <!-- Cabeçalho com Assunto e Status -->
+    <div class="section">
+        <div style="display: flex; justify-content: between; align-items: flex-start; gap: 20px;">
+            <div style="flex: 1;">
+                <h1 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 24px;">{{ ocorrencia.assunto }}</h1>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <span class="badge badge-categoria">{{ ocorrencia.categoria }}</span>
+                    <span class="badge badge-priority-{{ ocorrencia.prioridade.lower() }}">{{ ocorrencia.prioridade }}</span>
+                    <span class="badge badge-status-{{ ocorrencia.status.lower().replace(' ', '') }}">{{ ocorrencia.status }}</span>
+                </div>
+            </div>
+            <div style="text-align: right;">
+                <div class="info-label">Nº da Ocorrência</div>
+                <div class="info-value large" style="font-weight: 700;">#{{ ocorrencia.id }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informações do Cliente e Local -->
+    <div class="section">
+        <h3>👤 Cliente e Local</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Cliente</div>
+                <div class="info-value large">{{ ocorrencia.cliente.nome if ocorrencia.cliente else 'N/A' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Endereço</div>
+                <div class="info-value">
+                    {% if ocorrencia.endereco %}
+                        {{ ocorrencia.endereco.logradouro }}, {{ ocorrencia.endereco.numero }} - {{ ocorrencia.endereco.bairro }}
+                    {% else %}
+                        <span style="color: #999;">Não especificado</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data, Hora e Contato -->
+    <div class="section">
+        <h3>🕐 Data, Hora e Contato</h3>
+        <div class="info-grid-3">
+            <div class="info-item">
+                <div class="info-label">Data da Ocorrência</div>
+                <div class="info-value">{{ ocorrencia.data_ocorrencia.strftime('%d/%m/%Y') }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Hora da Ocorrência</div>
+                <div class="info-value">{{ ocorrencia.hora_ocorrencia.strftime('%H:%M') }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Tipo de Contato</div>
+                <div class="info-value">{{ ocorrencia.tipo_contato }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Canal de Entrada</div>
+                <div class="info-value">{{ ocorrencia.canal_entrada }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Responsável</div>
+                <div class="info-value">
+                    {% if ocorrencia.responsavel %}
+                        {{ ocorrencia.responsavel }}
+                    {% else %}
+                        <span style="color: #999;">Não atribuído</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Tempo de Resolução</div>
+                <div class="info-value">
+                    {% if ocorrencia.tempo_resolucao %}
+                        {{ ocorrencia.tempo_resolucao }}
+                    {% else %}
+                        <span style="color: #999;">Em andamento</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Descrição da Ocorrência -->
+    <div class="section">
+        <h3>📝 Descrição da Ocorrência</h3>
+        <div class="description-box">
+            <div class="info-value large" style="white-space: pre-wrap;">{{ ocorrencia.descricao }}</div>
+        </div>
+    </div>
+
+    <!-- Solução e Feedback -->
+    {% if ocorrencia.status in ['Resolvido', 'Fechado'] %}
+    <div class="section">
+        <h3>✅ Solução e Feedback</h3>
+        
+        {% if ocorrencia.solucao %}
+        <div class="solution-box" style="margin-bottom: 20px;">
+            <div class="info-label" style="margin-bottom: 10px;">Solução Aplicada</div>
+            <div class="info-value large" style="white-space: pre-wrap;">{{ ocorrencia.solucao }}</div>
+        </div>
+        {% endif %}
+
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Data de Resolução</div>
+                <div class="info-value">
+                    {% if ocorrencia.data_resolucao %}
+                        {{ ocorrencia.data_resolucao.strftime('%d/%m/%Y') }}
+                    {% else %}
+                        <span style="color: #999;">Não informada</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Hora de Resolução</div>
+                <div class="info-value">
+                    {% if ocorrencia.hora_resolucao %}
+                        {{ ocorrencia.hora_resolucao.strftime('%H:%M') }}
+                    {% else %}
+                        <span style="color: #999;">Não informada</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Satisfação do Cliente</div>
+                <div class="info-value">
+                    {% if ocorrencia.satisfacao %}
+                        <span class="badge badge-satisfacao satisfacao-{{ ocorrencia.satisfacao.lower().replace(' ', '-') }}">
+                            {{ ocorrencia.satisfacao }}
+                        </span>
+                    {% else %}
+                        <span style="color: #999;">Não avaliado</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if ocorrencia.feedback %}
+        <div class="feedback-box" style="margin-top: 15px;">
+            <div class="info-label" style="margin-bottom: 10px;">Feedback do Cliente</div>
+            <div class="info-value large" style="white-space: pre-wrap;">{{ ocorrencia.feedback }}</div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Anexos -->
+    <div class="section">
+        <h3>📎 Anexos</h3>
+        {% if ocorrencia.arquivo_anexo %}
+        <div class="file-attachment">
+            <div class="file-icon">📄</div>
+            <div class="file-info">
+                <div class="file-name">{{ ocorrencia.arquivo_anexo }}</div>
+            </div>
+            <a href="/api/sac/download/documentos/{{ ocorrencia.arquivo_anexo }}" class="file-download" download>
+                Download
+            </a>
+        </div>
+        {% else %}
+        <div class="empty-state">Nenhum arquivo anexado</div>
+        {% endif %}
+    </div>
+
+    <!-- Timeline da Ocorrência -->
+    <div class="section">
+        <h3>📋 Histórico</h3>
+        <div class="timeline">
+            <div class="timeline-item">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                    <div class="timeline-date">{{ ocorrencia.data_ocorrencia.strftime('%d/%m/%Y') }} às {{ ocorrencia.hora_ocorrencia.strftime('%H:%M') }}</div>
+                    <div class="timeline-title">Ocorrência Registrada</div>
+                    <div class="info-value">Ocorrência criada via {{ ocorrencia.canal_entrada }}</div>
+                </div>
+            </div>
+            
+            {% if ocorrencia.status != 'Aberto' %}
+            <div class="timeline-item">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                    <div class="timeline-date">
+                        {% if ocorrencia.updated_at %}
+                            {{ ocorrencia.updated_at.strftime('%d/%m/%Y') }} às {{ ocorrencia.updated_at.strftime('%H:%M') }}
+                        {% else %}
+                            Data não registrada
+                        {% endif %}
+                    </div>
+                    <div class="timeline-title">Status Alterado para {{ ocorrencia.status }}</div>
+                    <div class="info-value">
+                        {% if ocorrencia.responsavel %}
+                            Atribuído para: {{ ocorrencia.responsavel }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if ocorrencia.status in ['Resolvido', 'Fechado'] and ocorrencia.data_resolucao %}
+            <div class="timeline-item">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                    <div class="timeline-date">
+                        {{ ocorrencia.data_resolucao.strftime('%d/%m/%Y') }}
+                        {% if ocorrencia.hora_resolucao %}
+                            às {{ ocorrencia.hora_resolucao.strftime('%H:%M') }}
+                        {% endif %}
+                    </div>
+                    <div class="timeline-title">Ocorrência Resolvida</div>
+                    <div class="info-value">
+                        {% if ocorrencia.satisfacao %}
+                            Satisfação do cliente: {{ ocorrencia.satisfacao }}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Ações -->
+    <div class="actions-toolbar">
+        <a href="/sac/{{ ocorrencia.id }}/editar" class="btn btn-edit">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+            </svg>
+            Editar
+        </a>
+        <a href="/sac" class="btn btn-secondary">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+            </svg>
+            Voltar para Lista
+        </a>
+    </div>
+</div>
+
+<!-- Card de Estatísticas -->
+<div class="details-card">
+    <h3 style="margin-bottom: 20px;">📊 Estatísticas da Ocorrência</h3>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-value">
+                {% set dias_aberto = (datetime.now().date() - ocorrencia.data_ocorrencia).days %}
+                {{ dias_aberto }}
+            </div>
+            <div class="stat-label">Dias Aberto</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ ocorrencia.prioridade }}</div>
+            <div class="stat-label">Prioridade</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ ocorrencia.categoria }}</div>
+            <div class="stat-label">Categoria</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ ocorrencia.tipo_contato }}</div>
+            <div class="stat-label">Tipo Contato</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+<script>
+// Função para calcular dias em aberto
+function calcularDiasAberto(dataOcorrencia) {
+    const dataOcor = new Date(dataOcorrencia);
+    const hoje = new Date();
+    const diffTime = Math.abs(hoje - dataOcor);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+}
+
+// Atualizar estatísticas em tempo real
+document.addEventListener('DOMContentLoaded', function() {
+    // Aqui você pode adicionar interatividade se necessário
+    console.log('Página de detalhes carregada');
+});
+</script>
+{% endblock %}

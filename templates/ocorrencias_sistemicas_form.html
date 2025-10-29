@@ -1,0 +1,590 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}{{ 'Editar' if ocorrencia else 'Nova' }} Ocorrência Sistêmica{% endblock %}
+
+{% block page_title %}{{ 'Editar' if ocorrencia else 'Nova' }} Ocorrência Sistêmica{% endblock %}
+
+{% block page_styles %}
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #667eea;
+    text-decoration: none;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.form-card {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    max-width: 1000px;
+}
+
+.form-section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.form-section:last-child {
+    border-bottom: none;
+}
+
+.form-section h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.form-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    margin-bottom: 8px;
+    color: #555;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.file-upload {
+    border: 2px dashed #ddd;
+    padding: 20px;
+    text-align: center;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.file-upload:hover {
+    border-color: #667eea;
+    background: #f8f9ff;
+}
+
+.file-upload input {
+    display: none;
+}
+
+.file-info {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #666;
+}
+
+.arquivo-preview {
+    margin-top: 10px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.arquivo-preview span {
+    font-size: 14px;
+}
+
+.btn-remove {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 30px;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.alert {
+    padding: 12px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    display: none;
+}
+
+.alert-error {
+    background: #fee;
+    color: #c33;
+    border: 1px solid #fcc;
+}
+
+.alert-success {
+    background: #efe;
+    color: #3c3;
+    border: 1px solid #cfc;
+}
+
+.priority-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+.priority-critica { background: #fee; color: #e74c3c; }
+.priority-alta { background: #fef5e7; color: #f39c12; }
+.priority-media { background: #e8f4fd; color: #3498db; }
+.priority-baixa { background: #eefbf3; color: #27ae60; }
+{% endblock %}
+
+{% block page_content %}
+<a href="/ocorrencias-sistemicas" class="back-link">← Voltar para lista</a>
+
+<div class="form-card">
+    <div id="alert" class="alert"></div>
+    
+    <form id="ocorrenciaForm">
+        <!-- Cliente e Endereço -->
+        <div class="form-section">
+            <h3>📍 Local da Ocorrência</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="cliente_id">Cliente *</label>
+                    <select id="cliente_id" required>
+                        <option value="">Selecione um cliente...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="endereco_id">Endereço *</label>
+                    <select id="endereco_id" name="endereco_id" required>
+                        <option value="">Selecione um endereço...</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Data e Hora -->
+        <div class="form-section">
+            <h3>🕐 Data e Hora da Ocorrência</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="data_ocorrencia">Data *</label>
+                    <input type="date" id="data_ocorrencia" name="data_ocorrencia" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="hora_ocorrencia">Hora *</label>
+                    <input type="time" id="hora_ocorrencia" name="hora_ocorrencia" required>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status e Prioridade -->
+        <div class="form-section">
+            <h3>📊 Status e Prioridade</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="status">Status *</label>
+                    <select id="status" name="status" required>
+                        <option value="Reportada">Reportada</option>
+                        <option value="Em Análise">Em Análise</option>
+                        <option value="Em Correção">Em Correção</option>
+                        <option value="Resolvida">Resolvida</option>
+                        <option value="Fechada">Fechada</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="prioridade">Prioridade *</label>
+                    <select id="prioridade" name="prioridade" required>
+                        <option value="Baixa">Baixa</option>
+                        <option value="Média">Média</option>
+                        <option value="Alta">Alta</option>
+                        <option value="Crítica">Crítica</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="responsavel">Responsável</label>
+                <input type="text" id="responsavel" name="responsavel" placeholder="Nome do responsável pela ocorrência...">
+            </div>
+        </div>
+
+        <!-- Solução (aparece apenas para status Resolvida/Fechada) -->
+        <div class="form-section" id="secao-solucao" style="display: none;">
+            <h3>✅ Solução</h3>
+            <div class="form-group full-width">
+                <label for="solucao">Solução Aplicada</label>
+                <textarea id="solucao" name="solucao" rows="4" 
+                          placeholder="Descreva a solução aplicada para resolver a ocorrência..."></textarea>
+            </div>
+        </div>
+        
+        <!-- Observação -->
+        <div class="form-section">
+            <h3>📝 Descrição da Ocorrência</h3>
+            <div class="form-group full-width">
+                <label for="observacao">Observação *</label>
+                <textarea id="observacao" name="observacao" rows="6" required 
+                          placeholder="Descreva detalhadamente a ocorrência sistêmica..."></textarea>
+            </div>
+        </div>
+        
+        <!-- Anexos -->
+        <div class="form-section">
+            <h3>📎 Anexos</h3>
+            
+            <div class="form-grid">
+                <!-- Documento -->
+                <div class="form-group">
+                    <label>Documento (Word/PDF)</label>
+                    <div class="file-upload" onclick="document.getElementById('arquivo_documento').click()">
+                        <div>📄 Clique para selecionar arquivo</div>
+                        <div class="file-info">Formatos: .doc, .docx, .pdf (Máx: 10MB)</div>
+                        <input type="file" id="arquivo_documento" accept=".doc,.docx,.pdf" onchange="previewArquivo(this, 'documento')">
+                    </div>
+                    <div id="preview-documento"></div>
+                    <input type="hidden" id="arquivo_documento_nome" name="arquivo_documento">
+                </div>
+                
+                <!-- Vídeo -->
+                <div class="form-group">
+                    <label>Vídeo (MP4)</label>
+                    <div class="file-upload" onclick="document.getElementById('arquivo_video').click()">
+                        <div>🎥 Clique para selecionar vídeo</div>
+                        <div class="file-info">Formato: .mp4 (Máx: 50MB)</div>
+                        <input type="file" id="arquivo_video" accept=".mp4" onchange="previewArquivo(this, 'video')">
+                    </div>
+                    <div id="preview-video"></div>
+                    <input type="hidden" id="arquivo_video_nome" name="arquivo_video">
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="window.location.href='/ocorrencias-sistemicas'">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+                {{ 'Atualizar' if ocorrencia else 'Cadastrar' }}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+const ocorrenciaId = {{ ocorrencia.id if ocorrencia else 'null' }};
+</script>
+{% endblock %}
+
+{% block page_scripts %}
+let clientes = [];
+let enderecos = [];
+
+async function carregarDados() {
+    try {
+        const response = await fetch('/api/ocorrencias-sistemicas');
+        const data = await response.json();
+        
+        if (data.success) {
+            clientes = data.clientes;
+            enderecos = data.enderecos;
+            
+            // Preencher select de clientes
+            const selectCliente = document.getElementById('cliente_id');
+            selectCliente.innerHTML = '<option value="">Selecione um cliente...</option>';
+            data.clientes.forEach(cliente => {
+                const option = document.createElement('option');
+                option.value = cliente.id;
+                option.textContent = cliente.nome;
+                selectCliente.appendChild(option);
+            });
+            
+            // Preencher select de endereços
+            atualizarEnderecos();
+            
+            // Se estiver editando, carregar dados
+            if (ocorrenciaId) {
+                await carregarOcorrencia();
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+        showAlert('Erro ao carregar dados', 'error');
+    }
+}
+
+function atualizarEnderecos() {
+    const clienteId = document.getElementById('cliente_id').value;
+    const selectEndereco = document.getElementById('endereco_id');
+    
+    selectEndereco.innerHTML = '<option value="">Selecione um endereço...</option>';
+    
+    if (clienteId) {
+        const enderecosFiltrados = enderecos.filter(end => end.cliente_id == clienteId);
+        enderecosFiltrados.forEach(end => {
+            const option = document.createElement('option');
+            option.value = end.id;
+            option.textContent = end.descricao;
+            selectEndereco.appendChild(option);
+        });
+    }
+}
+
+async function carregarOcorrencia() {
+    try {
+        const response = await fetch(`/api/ocorrencias-sistemicas/${ocorrenciaId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const ocorrencia = data.ocorrencia;
+            
+            // Selecionar cliente e atualizar endereços
+            document.getElementById('cliente_id').value = ocorrencia.cliente_id;
+            atualizarEnderecos();
+            
+            // Aguardar um pouco para o select de endereços ser preenchido
+            setTimeout(() => {
+                document.getElementById('endereco_id').value = ocorrencia.endereco_id;
+                document.getElementById('data_ocorrencia').value = ocorrencia.data_ocorrencia_iso;
+                document.getElementById('hora_ocorrencia').value = ocorrencia.hora_ocorrencia;
+                document.getElementById('observacao').value = ocorrencia.observacao;
+                document.getElementById('status').value = ocorrencia.status;
+                document.getElementById('prioridade').value = ocorrencia.prioridade;
+                document.getElementById('responsavel').value = ocorrencia.responsavel || '';
+                document.getElementById('solucao').value = ocorrencia.solucao || '';
+                
+                // Mostrar/ocultar seção de solução baseado no status
+                toggleSecaoSolucao(ocorrencia.status);
+                
+                // Mostrar preview dos arquivos existentes
+                if (ocorrencia.arquivo_documento) {
+                    document.getElementById('arquivo_documento_nome').value = ocorrencia.arquivo_documento;
+                    showPreview(ocorrencia.arquivo_documento, 'documento', true);
+                }
+                if (ocorrencia.arquivo_video) {
+                    document.getElementById('arquivo_video_nome').value = ocorrencia.arquivo_video;
+                    showPreview(ocorrencia.arquivo_video, 'video', true);
+                }
+            }, 100);
+        }
+    } catch (error) {
+        console.error('Erro ao carregar ocorrência:', error);
+        showAlert('Erro ao carregar ocorrência', 'error');
+    }
+}
+
+// Mostrar/ocultar seção de solução baseado no status
+function toggleSecaoSolucao(status) {
+    const secaoSolucao = document.getElementById('secao-solucao');
+    if (status === 'Resolvida' || status === 'Fechada') {
+        secaoSolucao.style.display = 'block';
+    } else {
+        secaoSolucao.style.display = 'none';
+    }
+}
+
+function previewArquivo(input, tipo) {
+    const file = input.files[0];
+    if (file) {
+        // Verificar tamanho do arquivo
+        const maxSize = tipo === 'documento' ? 10 * 1024 * 1024 : 50 * 1024 * 1024; // 10MB ou 50MB
+        if (file.size > maxSize) {
+            showAlert(`Arquivo muito grande. Tamanho máximo: ${maxSize / 1024 / 1024}MB`, 'error');
+            input.value = '';
+            return;
+        }
+        
+        showPreview(file.name, tipo, false);
+        
+        // Em uma implementação real, você faria o upload aqui
+        // e salvaria o nome do arquivo no campo hidden
+        document.getElementById(`arquivo_${tipo}_nome`).value = file.name;
+    }
+}
+
+function showPreview(nomeArquivo, tipo, isExisting) {
+    const previewDiv = document.getElementById(`preview-${tipo}`);
+    const icon = tipo === 'documento' ? '📄' : '🎥';
+    
+    previewDiv.innerHTML = `
+        <div class="arquivo-preview">
+            <span>${icon} ${nomeArquivo}</span>
+            <button type="button" class="btn-remove" onclick="removerArquivo('${tipo}')">
+                ✕
+            </button>
+        </div>
+    `;
+}
+
+function removerArquivo(tipo) {
+    document.getElementById(`arquivo_${tipo}`).value = '';
+    document.getElementById(`arquivo_${tipo}_nome`).value = '';
+    document.getElementById(`preview-${tipo}`).innerHTML = '';
+}
+
+function showAlert(message, type) {
+    const alert = document.getElementById('alert');
+    alert.textContent = message;
+    alert.className = `alert alert-${type}`;
+    alert.style.display = 'block';
+    
+    setTimeout(() => {
+        alert.style.display = 'none';
+    }, 5000);
+}
+
+document.getElementById('ocorrenciaForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Salvando...';
+    
+    try {
+        const formData = new FormData();
+        formData.append('endereco_id', document.getElementById('endereco_id').value);
+        formData.append('data_ocorrencia', document.getElementById('data_ocorrencia').value);
+        formData.append('hora_ocorrencia', document.getElementById('hora_ocorrencia').value);
+        formData.append('observacao', document.getElementById('observacao').value);
+        formData.append('status', document.getElementById('status').value);
+        formData.append('prioridade', document.getElementById('prioridade').value);
+        formData.append('responsavel', document.getElementById('responsavel').value);
+        formData.append('solucao', document.getElementById('solucao').value);
+        
+        // Adicionar arquivos se selecionados
+        const arquivoDocumento = document.getElementById('arquivo_documento').files[0];
+        const arquivoVideo = document.getElementById('arquivo_video').files[0];
+        
+        if (arquivoDocumento) {
+            formData.append('arquivo_documento', arquivoDocumento);
+        }
+        if (arquivoVideo) {
+            formData.append('arquivo_video', arquivoVideo);
+        }
+        
+        const url = ocorrenciaId ? `/api/ocorrencias-sistemicas/${ocorrenciaId}` : '/api/ocorrencias-sistemicas';
+        const method = ocorrenciaId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            body: formData
+            // Não definir Content-Type - o browser vai definir automaticamente com boundary
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert(data.message, 'success');
+            setTimeout(() => {
+                window.location.href = '/ocorrencias-sistemicas';
+            }, 1500);
+        } else {
+            showAlert(data.message, 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao salvar ocorrência:', error);
+        showAlert('Erro ao salvar ocorrência', 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = ocorrenciaId ? 'Atualizar' : 'Cadastrar';
+    }
+});
+
+// Event listeners
+document.getElementById('status').addEventListener('change', function() {
+    toggleSecaoSolucao(this.value);
+});
+
+document.getElementById('cliente_id').addEventListener('change', atualizarEnderecos);
+
+// Inicialização
+document.addEventListener('DOMContentLoaded', () => {
+    // Definir data atual como padrão
+    const hoje = new Date().toISOString().split('T')[0];
+    document.getElementById('data_ocorrencia').value = hoje;
+    
+    // Definir hora atual como padrão
+    const agora = new Date();
+    const horas = agora.getHours().toString().padStart(2, '0');
+    const minutos = agora.getMinutes().toString().padStart(2, '0');
+    document.getElementById('hora_ocorrencia').value = `${horas}:${minutos}`;
+    
+    carregarDados();
+});
+{% endblock %}

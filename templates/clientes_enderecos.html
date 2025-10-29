@@ -353,6 +353,18 @@
 .periodo-personalizado.show {
     display: block;
 }
+.rondas-section {
+    display: none;
+    background: #f0f8ff;
+    padding: 15px;
+    border-radius: 5px;
+    margin-top: 10px;
+    border-left: 4px solid #3498db;
+}
+
+.rondas-section.show {
+    display: block;
+}
 
 .form-actions {
     display: flex;
@@ -604,7 +616,46 @@
                     </div>
                 </div>
             </div>
-            
+            <!-- Rondas Virtuais -->
+            <div class="form-section">
+                <h3>📹 Rondas Virtuais</h3>
+                
+                <div class="checkbox-group">
+                    <input type="checkbox" id="possui_rondas_virtuais" onchange="toggleRondasVirtuais()">
+                    <label for="possui_rondas_virtuais">Possui Rondas Virtuais</label>
+                </div>
+                
+                <div id="rondas-section" class="rondas-section">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="qtd_cameras_rondas">Quantidade de Câmeras *</label>
+                            <input type="number" id="qtd_cameras_rondas" min="1" placeholder="Ex: 4">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="frequencia_rondas">Frequência das Rondas *</label>
+                            <select id="frequencia_rondas">
+                                <option value="">Selecione...</option>
+                                <option value="1hora">1 hora</option>
+                                <option value="2horas">2 horas</option>
+                                <option value="3horas">3 horas</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group full-width">
+                            <label for="periodo_recebimento_rondas">Período de Recebimento *</label>
+                            <select id="periodo_recebimento_rondas">
+                                <option value="">Selecione...</option>
+                                <option value="diario">Diário</option>
+                                <option value="semanal">Semanal</option>
+                                <option value="quinzenal">Quinzenal</option>
+                                <option value="mensal">Mensal</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Contrato Financeiro -->
             <div class="form-section">
                 <h3>💰 Valores do Contrato</h3>
@@ -692,6 +743,29 @@ function togglePeriodoPersonalizado() {
     }
 }
 
+function toggleRondasVirtuais() {
+    const possui = document.getElementById('possui_rondas_virtuais').checked;
+    const section = document.getElementById('rondas-section');
+    const qtdCameras = document.getElementById('qtd_cameras_rondas');
+    const frequencia = document.getElementById('frequencia_rondas');
+    const periodo = document.getElementById('periodo_recebimento_rondas');
+    
+    if (possui) {
+        section.classList.add('show');
+        qtdCameras.required = true;
+        frequencia.required = true;
+        periodo.required = true;
+    } else {
+        section.classList.remove('show');
+        qtdCameras.required = false;
+        qtdCameras.value = '';
+        frequencia.required = false;
+        frequencia.value = '';
+        periodo.required = false;
+        periodo.value = '';
+    }
+}
+
 // Máscara CEP
 document.getElementById('cep').addEventListener('input', function(e) {
     let value = e.target.value.replace(/\D/g, '');
@@ -751,6 +825,13 @@ function abrirModal(endereco = null) {
         document.getElementById('tipo_nobreak').value = endereco.tipo_nobreak;
         document.getElementById('tipo_gravacao').value = endereco.tipo_gravacao;
         document.getElementById('tipo_manutencao').value = endereco.tipo_manutencao;
+
+        document.getElementById('possui_rondas_virtuais').checked = endereco.possui_rondas_virtuais || false;
+        toggleRondasVirtuais();
+        document.getElementById('qtd_cameras_rondas').value = endereco.qtd_cameras_rondas || '';
+        document.getElementById('frequencia_rondas').value = endereco.frequencia_rondas || '';
+        document.getElementById('periodo_recebimento_rondas').value = endereco.periodo_recebimento_rondas || '';
+
         document.getElementById('valor_contrato').value = endereco.valor_contrato;
         document.getElementById('percentual_reajuste').value = endereco.percentual_reajuste;
         document.getElementById('periodo_atendimento').value = endereco.periodo_atendimento;
@@ -824,6 +905,12 @@ async function carregarEnderecos() {
                         <div class="detail-item">
                             <span class="detail-label">Apartamentos/Casas</span>
                             <span class="detail-value">${end.nr_apartamentos}</span>
+                        </div>
+                        ` : ''}
+                        ${end.possui_rondas_virtuais ? `
+                        <div class="detail-item">
+                            <span class="detail-label">Rondas Virtuais - Frequência - Recebimento</span>
+                            <span class="detail-value">✓ ${end.qtd_cameras_rondas} câmeras - ${end.frequencia_rondas} - ${end.periodo_recebimento_rondas} </span>
                         </div>
                         ` : ''}
                     </div>
@@ -904,6 +991,10 @@ document.getElementById('enderecoForm').addEventListener('submit', async (e) => 
         tipo_nobreak: document.getElementById('tipo_nobreak').value,
         tipo_gravacao: document.getElementById('tipo_gravacao').value,
         tipo_manutencao: document.getElementById('tipo_manutencao').value,
+        possui_rondas_virtuais: document.getElementById('possui_rondas_virtuais').checked,
+        qtd_cameras_rondas: document.getElementById('qtd_cameras_rondas').value || null,
+        frequencia_rondas: document.getElementById('frequencia_rondas').value || null,
+        periodo_recebimento_rondas: document.getElementById('periodo_recebimento_rondas').value || null,
         valor_contrato: document.getElementById('valor_contrato').value,
         percentual_reajuste: document.getElementById('percentual_reajuste').value,
         periodo_atendimento: document.getElementById('periodo_atendimento').value,

@@ -1,0 +1,575 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Ocorrências Sistêmicas{% endblock %}
+
+{% block page_title %}Gestão de Ocorrências Sistêmicas{% endblock %}
+
+{% block page_styles %}
+.toolbar {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.filter-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-group label {
+    color: #555;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.filter-group select,
+.filter-group input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    min-width: 120px;
+}
+
+.btn-primary {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+.stat-card.priority-critical {
+    border-left: 4px solid #e74c3c;
+}
+
+.stat-card.status-reported {
+    border-left: 4px solid #3498db;
+}
+
+.stat-card.status-analysis {
+    border-left: 4px solid #f39c12;
+}
+
+.stat-card.status-correction {
+    border-left: 4px solid #e67e22;
+}
+
+.stat-card.status-resolved {
+    border-left: 4px solid #27ae60;
+}
+
+.stat-card h3 {
+    color: #7f8c8d;
+    font-size: 12px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.stat-card .value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.table-container {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+thead {
+    background: #f8f9fa;
+}
+
+th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    color: #2c3e50;
+    border-bottom: 2px solid #dee2e6;
+}
+
+td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #dee2e6;
+    color: #555;
+}
+
+tr:hover {
+    background: #f8f9fa;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.btn-icon {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s;
+}
+
+.btn-edit {
+    background: #3498db;
+    color: white;
+}
+
+.btn-edit:hover {
+    background: #2980b9;
+}
+
+.btn-delete {
+    background: #e74c3c;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #c0392b;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+}
+
+.badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-priority-critica {
+    background: #fee;
+    color: #e74c3c;
+}
+
+.badge-priority-alta {
+    background: #fef5e7;
+    color: #f39c12;
+}
+
+.badge-priority-media {
+    background: #e8f4fd;
+    color: #3498db;
+}
+
+.badge-priority-baixa {
+    background: #eefbf3;
+    color: #27ae60;
+}
+
+.badge-status-reportada {
+    background: #e8f4fd;
+    color: #3498db;
+}
+
+.badge-status-analise {
+    background: #fef5e7;
+    color: #f39c12;
+}
+
+.badge-status-correcao {
+    background: #fdebd0;
+    color: #e67e22;
+}
+
+.badge-status-resolvida {
+    background: #eefbf3;
+    color: #27ae60;
+}
+
+.badge-status-fechada {
+    background: #f8f9fa;
+    color: #6c757d;
+}
+
+.observacao-preview {
+    max-width: 250px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.arquivos-badges {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.file-badge {
+    padding: 3px 6px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.badge-documento {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.badge-video {
+    background: #f3e5f5;
+    color: #7b1fa2;
+}
+{% endblock %}
+
+{% block page_content %}
+<div class="toolbar">
+    <div class="filter-group">
+        <label for="filtro-cliente">Cliente:</label>
+        <select id="filtro-cliente">
+            <option value="">Todos</option>
+        </select>
+        
+        <label for="filtro-endereco">Endereço:</label>
+        <select id="filtro-endereco">
+            <option value="">Todos</option>
+        </select>
+        
+        <label for="filtro-status">Status:</label>
+        <select id="filtro-status">
+            <option value="todos">Todos</option>
+            <option value="Reportada">Reportada</option>
+            <option value="Em Análise">Em Análise</option>
+            <option value="Em Correção">Em Correção</option>
+            <option value="Resolvida">Resolvida</option>
+            <option value="Fechada">Fechada</option>
+        </select>
+        
+        <label for="filtro-prioridade">Prioridade:</label>
+        <select id="filtro-prioridade">
+            <option value="todos">Todas</option>
+            <option value="Crítica">Crítica</option>
+            <option value="Alta">Alta</option>
+            <option value="Média">Média</option>
+            <option value="Baixa">Baixa</option>
+        </select>
+        
+        <label for="filtro-mes">Mês:</label>
+        <input type="month" id="filtro-mes">
+    </div>
+    
+    <div style="display: flex; gap: 10px;">
+        <button class="btn-primary" onclick="aplicarFiltros()">Filtrar</button>
+        <a href="/ocorrencias-sistemicas/novo" class="btn-primary">+ Nova Ocorrência</a>
+    </div>
+</div>
+
+<div class="stats-grid" id="stats-container">
+    <!-- Estatísticas serão carregadas via JavaScript -->
+</div>
+
+<div class="table-container">
+    <div id="loading" class="loading">Carregando...</div>
+    <div id="content" style="display: none;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Data/Hora</th>
+                    <th>Cliente / Endereço</th>
+                    <th>Observação</th>
+                    <th>Prioridade</th>
+                    <th>Status</th>
+                    <th>Responsável</th>
+                    <th>Dias Aberto</th>
+                    <th>Anexos</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-ocorrencias">
+            </tbody>
+        </table>
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <p>Nenhuma ocorrência sistêmica encontrada</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_scripts %}
+let clientes = [];
+let enderecos = [];
+let filtroCliente = '';
+let filtroEndereco = '';
+let filtroStatus = '';
+let filtroPrioridade = '';
+let filtroMes = '';
+
+async function carregarDados() {
+    try {
+        const response = await fetch('/api/ocorrencias-sistemicas');
+        const data = await response.json();
+        
+        if (data.success) {
+            clientes = data.clientes;
+            enderecos = data.enderecos;
+            
+            // Preencher select de clientes
+            const selectCliente = document.getElementById('filtro-cliente');
+            selectCliente.innerHTML = '<option value="">Todos</option>';
+            data.clientes.forEach(cliente => {
+                const option = document.createElement('option');
+                option.value = cliente.id;
+                option.textContent = cliente.nome;
+                selectCliente.appendChild(option);
+            });
+            
+            // Preencher select de endereços
+            const selectEndereco = document.getElementById('filtro-endereco');
+            selectEndereco.innerHTML = '<option value="">Todos</option>';
+            data.enderecos.forEach(end => {
+                const option = document.createElement('option');
+                option.value = end.id;
+                option.textContent = end.descricao;
+                selectEndereco.appendChild(option);
+            });
+            
+            carregarEstatisticas(data.estatisticas);
+        }
+    } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+    }
+}
+
+function carregarEstatisticas(estatisticas) {
+    const statsContainer = document.getElementById('stats-container');
+    statsContainer.innerHTML = `
+        <div class="stat-card priority-critical">
+            <h3>Críticas</h3>
+            <div class="value">${estatisticas.total_critica}</div>
+        </div>
+        <div class="stat-card status-reported">
+            <h3>Reportadas</h3>
+            <div class="value">${estatisticas.total_reportada}</div>
+        </div>
+        <div class="stat-card status-analysis">
+            <h3>Em Análise</h3>
+            <div class="value">${estatisticas.total_analise}</div>
+        </div>
+        <div class="stat-card status-correction">
+            <h3>Em Correção</h3>
+            <div class="value">${estatisticas.total_correcao}</div>
+        </div>
+        <div class="stat-card status-resolved">
+            <h3>Resolvidas</h3>
+            <div class="value">${estatisticas.total_resolvida}</div>
+        </div>
+        <div class="stat-card">
+            <h3>Total de Ocorrências</h3>
+            <div class="value" id="total-ocorrencias">0</div>
+        </div>
+    `;
+}
+
+function aplicarFiltros() {
+    filtroCliente = document.getElementById('filtro-cliente').value;
+    filtroEndereco = document.getElementById('filtro-endereco').value;
+    filtroStatus = document.getElementById('filtro-status').value;
+    filtroPrioridade = document.getElementById('filtro-prioridade').value;
+    filtroMes = document.getElementById('filtro-mes').value;
+    
+    carregarOcorrencias();
+}
+
+async function carregarOcorrencias() {
+    const loading = document.getElementById('loading');
+    const content = document.getElementById('content');
+    const tbody = document.getElementById('tbody-ocorrencias');
+    const emptyState = document.getElementById('empty-state');
+    
+    loading.style.display = 'block';
+    content.style.display = 'none';
+    
+    try {
+        let url = '/api/ocorrencias-sistemicas?';
+        if (filtroCliente) url += `cliente_id=${filtroCliente}&`;
+        if (filtroEndereco) url += `endereco_id=${filtroEndereco}&`;
+        if (filtroStatus && filtroStatus !== 'todos') url += `status=${filtroStatus}&`;
+        if (filtroPrioridade && filtroPrioridade !== 'todos') url += `prioridade=${filtroPrioridade}&`;
+        if (filtroMes) url += `mes=${filtroMes}&`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        tbody.innerHTML = '';
+        
+        document.getElementById('total-ocorrencias').textContent = data.ocorrencias.length;
+        
+        if (data.ocorrencias.length === 0) {
+            emptyState.style.display = 'block';
+        } else {
+            emptyState.style.display = 'none';
+            
+            data.ocorrencias.forEach(ocorrencia => {
+                // Preparar badges de anexos
+                let anexosHTML = '<div class="arquivos-badges">';
+                if (ocorrencia.arquivo_documento) {
+                    anexosHTML += `<span class="file-badge badge-documento">DOC</span>`;
+                }
+                if (ocorrencia.arquivo_video) {
+                    anexosHTML += `<span class="file-badge badge-video">VIDEO</span>`;
+                }
+                if (!ocorrencia.arquivo_documento && !ocorrencia.arquivo_video) {
+                    anexosHTML += '<span style="color: #999; font-size: 11px;">Nenhum</span>';
+                }
+                anexosHTML += '</div>';
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <strong>${ocorrencia.data_ocorrencia}</strong><br>
+                        <small>${ocorrencia.hora_ocorrencia}</small>
+                    </td>
+                    <td>
+                        <strong>${ocorrencia.cliente_nome}</strong><br>
+                        <small style="color: #666; font-size: 11px;">${ocorrencia.endereco_descricao}</small>
+                    </td>
+                    <td>
+                        <div class="observacao-preview" title="${ocorrencia.observacao}">
+                            ${ocorrencia.observacao}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge badge-priority-${ocorrencia.prioridade.toLowerCase()}">
+                            ${ocorrencia.prioridade}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge badge-status-${ocorrencia.status.toLowerCase().replace(' ', '').replace('ã', 'a')}">
+                            ${ocorrencia.status}
+                        </span>
+                    </td>
+                    <td>${ocorrencia.responsavel || '-'}</td>
+                    <td>
+                        ${ocorrencia.dias_aberto > 0 ? `<strong style="color: ${ocorrencia.dias_aberto > 7 ? '#e74c3c' : '#f39c12'}">${ocorrencia.dias_aberto}d</strong>` : '-'}
+                    </td>
+                    <td>${anexosHTML}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-icon btn-edit" onclick="editar(${ocorrencia.id})" title="Editar">
+                                ✏️
+                            </button>
+                            <button class="btn-icon btn-delete" onclick="excluir(${ocorrencia.id}, '${ocorrencia.data_ocorrencia}')" title="Excluir">
+                                🗑️
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        loading.style.display = 'none';
+        content.style.display = 'block';
+    } catch (error) {
+        console.error('Erro ao carregar ocorrências:', error);
+        loading.style.display = 'none';
+        alert('Erro ao carregar ocorrências');
+    }
+}
+
+function downloadArquivo(nomeArquivo, tipo) {
+    const tipoPasta = tipo === 'documento' ? 'documentos' : 'videos';
+    window.open(`/api/ocorrencias-sistemicas/download/${tipoPasta}/${nomeArquivo}`, '_blank');
+}
+
+function editar(id) {
+    window.location.href = `/ocorrencias-sistemicas/${id}/editar`;
+}
+
+async function excluir(id, data) {
+    if (!confirm(`Deseja realmente excluir a ocorrência do dia ${data}?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/ocorrencias-sistemicas/${id}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message);
+            carregarOcorrencias();
+            // Recarregar estatísticas
+            const responseStats = await fetch('/api/ocorrencias-sistemicas');
+            const dataStats = await responseStats.json();
+            if (dataStats.success) {
+                carregarEstatisticas(dataStats.estatisticas);
+            }
+        } else {
+            alert('Erro: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Erro ao excluir ocorrência:', error);
+        alert('Erro ao excluir ocorrência');
+    }
+}
+
+// Definir mês atual como padrão
+document.addEventListener('DOMContentLoaded', async () => {
+    const hoje = new Date();
+    const mesAtual = hoje.toISOString().slice(0, 7);
+    document.getElementById('filtro-mes').value = mesAtual;
+    filtroMes = mesAtual;
+    
+    await carregarDados();
+    await carregarOcorrencias();
+});
+{% endblock %}

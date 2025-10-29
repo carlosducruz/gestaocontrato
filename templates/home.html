@@ -68,6 +68,16 @@
         <div class="value">{{ atendimentos_mes }}</div>
         <div class="trend">&nbsp;</div>
     </div>
+    <div class="stat-card">
+        <h3>Ocorrências Sistêmicas - {{ now.strftime('%m/%Y') }}</h3>
+        <div class="value">{{ ocorrencias_sistemicas_mes }}</div>
+        <div class="trend">&nbsp;</div>
+    </div>
+    <div class="stat-card">
+        <h3>Atendimentos Pronta Resposta - {{ now.strftime('%m/%Y') }}</h3>
+        <div class="value">{{ atendimentos_pr_mes }}</div>
+        <div class="trend">&nbsp;</div>
+    </div>
 </div>
 
 <div class="content-card">

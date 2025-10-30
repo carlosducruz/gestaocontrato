@@ -1,3 +1,5 @@
+import logging
+import os
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
@@ -5,12 +7,30 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from datetime import datetime
 
+# Configuração de logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(name)s: %(message)s',
+    handlers=[
+        logging.FileHandler("app.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
 import os
 
 app = Flask(__name__)
+logger.info("Aplicação iniciada")
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://appuser:apppass123@172.24.167.206:5432/appdb')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Handler global para erros não tratados
+@app.errorhandler(Exception)
+def handle_exception(e):
+    logger.error(f"Erro não tratado: {e}", exc_info=True)
+    return "Ocorreu um erro interno.", 500
 
 # Configuração do upload de arquivos
 app.config['UPLOAD_FOLDER'] = 'uploads'

@@ -86,6 +86,11 @@
         <div class="value" id="stat-pronta-resposta-mes">{{ atendimentos_pr_mes }}</div>
         <div class="trend">&nbsp;</div>
     </div>
+    <div class="stat-card">
+        <h3>Portarias Remotas</h3>
+        <div class="value" id="stat-portarias-remotas">0</div>
+        <div class="trend" id="stat-total-cameras">0 câmeras</div>
+    </div>
 </div>
 
 <div class="content-card">
@@ -143,6 +148,23 @@
             </tbody>
         </table>
     </div>
+    <br/>
+    <div class="content-card" id="card-resumo-portarias">
+        <h2>Resumo de Portarias Remotas Ativas (<span id="portarias-mesano">{{ now.strftime('%m/%Y') }}</span>)</h2>
+        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+            <thead>
+                <tr style="background:#f4f4f4;">
+                    <th style="padding:8px; border:1px solid #eee; text-align:left;">Cliente</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:left;">Endereço</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:right;">Câmeras</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:center;">Rondas Virtuais</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-resumo-portarias">
+                <tr><td colspan="4" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
 
     {% block page_scripts %}
     <script>
@@ -162,6 +184,9 @@
             document.getElementById('stat-pronta-resposta-mes').textContent = data.atendimentos_pr_mes;
             document.getElementById('resumo-mesano').textContent = mesAno.split('-').reverse().join('/');
             document.getElementById('ocorrencias-mesano').textContent = mesAno.split('-').reverse().join('/');
+            document.getElementById('stat-portarias-remotas').textContent = data.portarias_remotas || 0;
+            document.getElementById('stat-total-cameras').textContent = (data.total_cameras_portarias || 0) + ' câmeras';
+
             // Atualiza tabela de resumo
             const tbody = document.getElementById('tbody-resumo-clientes');
             tbody.innerHTML = '';
@@ -196,6 +221,27 @@
             } else {
                 tbodyOc.innerHTML = `<tr><td colspan="2" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Nenhuma ocorrência registrada neste mês.</td></tr>`;
             }
+
+            document.getElementById('portarias-mesano').textContent = mesAno.split('-').reverse().join('/');
+
+            // Atualiza tabela de portarias remotas
+            const tbodyPortarias = document.getElementById('tbody-resumo-portarias');
+            tbodyPortarias.innerHTML = '';
+            if (data.portarias_detalhes && data.portarias_detalhes.length > 0) {
+                data.portarias_detalhes.forEach(portaria => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="padding:8px; border:1px solid #eee;">${portaria.cliente_nome}</td>
+                        <td style="padding:8px; border:1px solid #eee;">${portaria.endereco}</td>
+                        <td style="padding:8px; border:1px solid #eee; text-align:right;">${portaria.qtd_cameras || 0}</td>
+                        <td style="padding:8px; border:1px solid #eee; text-align:center;">${portaria.rondas_virtuais ? '✅' : '❌'}</td>
+                    `;
+                    tbodyPortarias.appendChild(tr);
+                });
+            } else {
+                tbodyPortarias.innerHTML = `<tr><td colspan="4" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Nenhuma portaria remota ativa encontrada.</td></tr>`;
+            }
+            
         } catch (error) {
             alert('Erro ao buscar dados do dashboard');
         }

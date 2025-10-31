@@ -2738,7 +2738,7 @@ def api_dashboard():
         mes_num = now.month
 
     # Usuários e clientes ativos (não dependem do mês)
-    usuarios_ativos = User.query.count()
+    usuarios_ativos = User.query.filter_by(ativo=True).count() if hasattr(User, 'ativo') else User.query.count()
     clientes_ativos = Cliente.query.filter_by(ativo=True).count()
 
     # Atendimentos
@@ -2801,6 +2801,28 @@ def api_dashboard():
         {'status': status, 'total': total}
         for status, total in resumo_ocorrencias_query
     ]
+        
+    # Resumo de Portarias Remotas
+    portarias_remotas = Endereco.query.filter_by(
+        portaria_remota=True, 
+        ativo=True
+    ).all()
+
+    portarias_remotas_count = len(portarias_remotas)
+    total_cameras_portarias = 0
+    portarias_detalhes = []
+
+    for endereco in portarias_remotas:
+        # Supondo que qtd_cameras_rondas representa o total de câmeras
+        qtd_cameras = endereco.qtd_cameras_rondas or 0
+        total_cameras_portarias += qtd_cameras
+        
+        portarias_detalhes.append({
+            'cliente_nome': endereco.cliente.nome if endereco.cliente else 'N/A',
+            'endereco': f"{endereco.logradouro}, {endereco.numero} - {endereco.bairro}",
+            'qtd_cameras': qtd_cameras,
+            'rondas_virtuais': endereco.possui_rondas_virtuais
+        })
 
     return jsonify({
         'usuarios_ativos': usuarios_ativos,
@@ -2809,7 +2831,10 @@ def api_dashboard():
         'ocorrencias_sistemicas_mes': ocorrencias_sistemicas_mes,
         'atendimentos_pr_mes': atendimentos_pr_mes,
         'resumo_clientes': resumo_clientes,
-        'resumo_ocorrencias': resumo_ocorrencias
+        'resumo_ocorrencias': resumo_ocorrencias,
+        'portarias_remotas': portarias_remotas_count,
+        'total_cameras_portarias': total_cameras_portarias,
+        'portarias_detalhes': portarias_detalhes
     })
 
 # Inicializar banco de dados

@@ -315,7 +315,15 @@ tr:hover {
         </div>
         <div class="info-item">
             <div class="info-label">Valor Total</div>
-            <div class="info-value" id="total-valor">R$ 0,00</div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="info-value" id="total-valor">R$ 0,00</div>
+             </div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">Filtrar por mês</div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <input type="month" id="mesFolgaPicker" style="padding: 4px 8px; border-radius: 5px; border: 1px solid #ddd; font-size: 15px;">
+            </div>
         </div>
     </div>
 </div>
@@ -403,7 +411,7 @@ tr:hover {
 </div>
 
 <script>
-const funcionarioId = {{ funcionario.id }};
+var funcionarioId = "{{ funcionario.id }}";
 let modoEdicao = false;
 let todosFuncionarios = [];
 </script>
@@ -482,44 +490,71 @@ async function carregarFolgas() {
         todosFuncionarios = data.funcionarios;
         preencherSelectFuncionarios();
         
-        // Calcular totais
-        const totalFolgas = data.folgas.length;
-        const totalValor = data.folgas.reduce((sum, f) => sum + parseFloat(f.valor_diaria), 0);
-        
-        document.getElementById('total-folgas').textContent = totalFolgas;
-        document.getElementById('total-valor').textContent = `R$ ${totalValor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-        
-        if (data.folgas.length === 0) {
-            emptyState.style.display = 'block';
+        // Preencher e configurar datepicker de mês
+        var mesFolgaPicker = document.getElementById('mesFolgaPicker');
+        var meses = [];
+        data.folgas.forEach(folga => {
+            var dataFolga = folga.data_folga;
+            var anoMes = '';
+            if (dataFolga.includes('/')) {
+                var partes = dataFolga.split('/');
+                anoMes = partes[2] + '-' + partes[1].padStart(2, '0');
+            } else if (dataFolga.includes('-')) {
+                anoMes = dataFolga.slice(0, 7);
+            }
+            if (anoMes && !meses.includes(anoMes)) {
+                meses.push(anoMes);
+            }
+        });
+        meses.sort((a, b) => b.localeCompare(a));
+        if (meses.length > 0) {
+            mesFolgaPicker.value = meses[0];
         } else {
-            emptyState.style.display = 'none';
-            
-            data.folgas.forEach(folga => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><strong>${folga.data_folga}</strong></td>
-                    <td>
-                        <span class="badge ${folga.motivo === 'Reforço por demanda' ? 'badge-info' : 'badge-warning'}">
-                            ${folga.motivo}
-                        </span>
-                    </td>
-                    <td><strong>R$ ${parseFloat(folga.valor_diaria).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></td>
-                    <td>${folga.funcionario_substituido_nome || '-'}</td>
-                    <td>${folga.observacao || '-'}</td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="btn-icon btn-edit" onclick='editarFolga(${JSON.stringify(folga)})' title="Editar">
-                                ✏️
-                            </button>
-                            <button class="btn-icon btn-delete" onclick="excluirFolga(${folga.id}, '${folga.data_folga}')" title="Excluir">
-                                🗑️
-                            </button>
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
+            var hoje = new Date();
+            mesFolgaPicker.value = hoje.toISOString().slice(0,7);
         }
+        function atualizarPorMes() {
+            var mesSelecionado = mesFolgaPicker.value;
+            var folgasFiltradas = data.folgas.filter(function(folga) {
+                var dataFolga = folga.data_folga;
+                var anoMes = '';
+                if (dataFolga.includes('/')) {
+                    var partes = dataFolga.split('/');
+                    anoMes = partes[2] + '-' + partes[1].padStart(2, '0');
+                } else if (dataFolga.includes('-')) {
+                    anoMes = dataFolga.slice(0, 7);
+                }
+                return anoMes === mesSelecionado;
+            });
+            var totalFolgas = folgasFiltradas.length;
+            var totalValor = folgasFiltradas.reduce(function(sum, f) { return sum + parseFloat(f.valor_diaria); }, 0);
+            document.getElementById('total-folgas').textContent = totalFolgas;
+            document.getElementById('total-valor').textContent = 'R$ ' + totalValor.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+
+            // Atualizar tabela
+            tbody.innerHTML = '';
+            if (folgasFiltradas.length === 0) {
+                emptyState.style.display = 'block';
+            } else {
+                emptyState.style.display = 'none';
+                folgasFiltradas.forEach(function(folga) {
+                    var tr = document.createElement('tr');
+                    var btnEditar = '<button class="btn-icon btn-edit" onclick="editarFolga(JSON.parse(decodeURIComponent(\'' + encodeURIComponent(JSON.stringify(folga)) + '\')))" title="Editar">Editar</button>';
+                    var btnExcluir = '<button class="btn-icon btn-delete" onclick="excluirFolga(' + folga.id + ', \'' + folga.data_folga + '\')" title="Excluir">Excluir</button>';
+                    tr.innerHTML =
+                        '<td><strong>' + folga.data_folga + '</strong></td>' +
+                        '<td><span class="badge ' + (folga.motivo === 'Reforço por demanda' ? 'badge-info' : 'badge-warning') + '">' + folga.motivo + '</span></td>' +
+                        '<td><strong>R$ ' + parseFloat(folga.valor_diaria).toLocaleString('pt-BR', {minimumFractionDigits: 2}) + '</strong></td>' +
+                        '<td>' + (folga.funcionario_substituido_nome || '-') + '</td>' +
+                        '<td>' + (folga.observacao || '-') + '</td>' +
+                        '<td><div class="action-buttons">' + btnEditar + btnExcluir + '</div></td>';
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+        mesFolgaPicker.onchange = atualizarPorMes;
+        atualizarPorMes();
+        
         
         loading.style.display = 'none';
         content.style.display = 'block';

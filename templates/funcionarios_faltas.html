@@ -349,7 +349,10 @@ tr:hover {
         </div>
         <div class="info-item">
             <div class="info-label">Total de Faltas</div>
-            <div class="info-value" id="total-faltas">0</div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="info-value" id="total-faltas">0</div>
+                <input type="month" id="mesFaltaPicker" style="padding: 4px 8px; border-radius: 5px; border: 1px solid #ddd; font-size: 15px;">
+            </div>
         </div>
     </div>
 </div>
@@ -428,7 +431,7 @@ tr:hover {
 </div>
 
 <script>
-const funcionarioId = {{ funcionario.id }};
+const funcionarioId = "{{ funcionario.id }}";
 let arquivoBase64 = null;
 let modoEdicao = false;
 </script>
@@ -449,7 +452,6 @@ function abrirModal(falta = null) {
     modoEdicao = falta !== null;
     document.getElementById('modal-title').textContent = modoEdicao ? 'Editar Falta' : 'Registrar Falta';
     document.getElementById('submitBtn').textContent = modoEdicao ? 'Atualizar' : 'Registrar';
-    
     if (modoEdicao) {
         document.getElementById('falta_id').value = falta.id;
         document.getElementById('data_falta').value = falta.data_falta_iso;
@@ -464,7 +466,6 @@ function abrirModal(falta = null) {
         document.getElementById('file-info').textContent = '';
         arquivoBase64 = null;
     }
-    
     document.getElementById('modal').classList.add('show');
 }
 
@@ -482,7 +483,6 @@ function handleFileSelect(event) {
             alert('Arquivo muito grande! Máximo 5MB');
             return;
         }
-        
         const reader = new FileReader();
         reader.onload = function(e) {
             arquivoBase64 = e.target.result;
@@ -492,56 +492,72 @@ function handleFileSelect(event) {
     }
 }
 
+function preencherMesAnoPicker() {
+    // Substituído por input type="month". Inicializa para mês atual.
+    const mesFaltaPicker = document.getElementById('mesFaltaPicker');
+    const hoje = new Date();
+    mesFaltaPicker.value = hoje.toISOString().slice(0,7);
+}
+
 async function carregarFaltas() {
     const loading = document.getElementById('loading');
     const content = document.getElementById('content');
     const tbody = document.getElementById('tbody-faltas');
     const emptyState = document.getElementById('empty-state');
-    
     loading.style.display = 'block';
     content.style.display = 'none';
-    
     try {
+        const mesFaltaPicker = document.getElementById('mesFaltaPicker');
+        const mesSelecionado = mesFaltaPicker.value;
         const response = await fetch(`/api/funcionarios/${funcionarioId}/faltas`);
         const data = await response.json();
-        
         tbody.innerHTML = '';
-        
-        document.getElementById('total-faltas').textContent = data.faltas.length;
-        
-        if (data.faltas.length === 0) {
+        // Filtrar faltas pelo mês selecionado (YYYY-MM)
+        const faltasFiltradas = data.faltas.filter(falta => {
+            let dataFalta = falta.data_falta;
+            let anoMes = '';
+            if (dataFalta.includes('/')) {
+                // Formato dd/mm/yyyy
+                let partes = dataFalta.split('/');
+                anoMes = partes[2] + '-' + partes[1].padStart(2, '0');
+            } else if (dataFalta.includes('-')) {
+                // Formato yyyy-mm-dd ou yyyy-mm
+                anoMes = dataFalta.slice(0,7);
+            }
+            return anoMes === mesSelecionado;
+        });
+        document.getElementById('total-faltas').textContent = faltasFiltradas.length;
+        if (faltasFiltradas.length === 0) {
             emptyState.style.display = 'block';
         } else {
             emptyState.style.display = 'none';
-            
-            data.faltas.forEach(falta => {
+            faltasFiltradas.forEach(falta => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><strong>${falta.data_falta}</strong></td>
-                    <td>
-                        <span class="badge ${falta.atestada ? 'badge-success' : 'badge-danger'}">
-                            ${falta.atestada ? '✓ Atestada' : '✗ Não Atestada'}
-                        </span>
-                    </td>
-                    <td>${falta.motivo || '-'}</td>
-                    <td>
-                        ${falta.arquivo_atestado ? '<button class="btn-icon btn-file" onclick="verArquivo(\'' + falta.arquivo_atestado + '\')" title="Ver Atestado">📄</button>' : '-'}
-                    </td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="btn-icon btn-edit" onclick='editarFalta(${JSON.stringify(falta)})' title="Editar">
-                                ✏️
-                            </button>
-                            <button class="btn-icon btn-delete" onclick="excluirFalta(${falta.id}, '${falta.data_falta}')" title="Excluir">
-                                🗑️
-                            </button>
-                        </div>
-                    </td>
-                `;
+                var html = '';
+                html += '<td><strong>' + falta.data_falta + '</strong></td>';
+                html += '<td>';
+                html += '<span class="badge ' + (falta.atestada ? 'badge-success' : 'badge-danger') + '">';
+                html += (falta.atestada ? '✓ Atestada' : '✗ Não Atestada');
+                html += '</span>';
+                html += '</td>';
+                html += '<td>' + (falta.motivo || '-') + '</td>';
+                html += '<td>';
+                if (falta.arquivo_atestado) {
+                    html += "<button class=\"btn-icon btn-file\" onclick=\"verArquivo('" + falta.arquivo_atestado + "')\" title=\"Ver Atestado\">📄</button>";
+                } else {
+                    html += "-";
+                }
+                html += "</td>";
+                html += "<td>";
+                html += "<div class=\"action-buttons\">";
+                html += "<button class=\"btn-icon btn-edit\" onclick=\"editarFalta('" + encodeURIComponent(JSON.stringify(falta)) + "')\" title=\"Editar\">✏️</button>";
+                html += "<button class=\"btn-icon btn-delete\" onclick=\"excluirFalta('" + falta.id + "', '" + falta.data_falta + "')\" title=\"Excluir\">🗑️</button>";
+                html += "</div>";
+                html += "</td>";
+                tr.innerHTML = html;
                 tbody.appendChild(tr);
             });
         }
-        
         loading.style.display = 'none';
         content.style.display = 'block';
     } catch (error) {
@@ -552,11 +568,13 @@ async function carregarFaltas() {
 }
 
 function editarFalta(falta) {
+    if (typeof falta === 'string') {
+        falta = JSON.parse(decodeURIComponent(falta));
+    }
     abrirModal(falta);
 }
 
 function verArquivo(arquivo) {
-    // Abre o arquivo de atestado usando a rota de download
     if (arquivo) {
         const url = `/api/sac/download/documentos/${encodeURIComponent(arquivo)}`;
         window.open(url, '_blank');
@@ -567,14 +585,11 @@ async function excluirFalta(id, data) {
     if (!confirm(`Deseja realmente excluir a falta do dia ${data}?`)) {
         return;
     }
-    
     try {
         const response = await fetch(`/api/funcionarios/${funcionarioId}/faltas/${id}`, {
             method: 'DELETE'
         });
-        
         const data = await response.json();
-        
         if (data.success) {
             showAlert(data.message, 'success');
             carregarFaltas();
@@ -589,12 +604,10 @@ async function excluirFalta(id, data) {
 
 document.getElementById('faltaForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const submitBtn = document.getElementById('submitBtn');
     const originalText = submitBtn.textContent;
     submitBtn.disabled = true;
     submitBtn.textContent = 'Salvando...';
-
     const faltaId = document.getElementById('falta_id').value;
     let url = `/api/funcionarios/${funcionarioId}/faltas`;
     let method = 'POST';
@@ -602,8 +615,6 @@ document.getElementById('faltaForm').addEventListener('submit', async (e) => {
         url = `/api/funcionarios/${funcionarioId}/faltas/${faltaId}`;
         method = 'PUT';
     }
-
-    // Monta o FormData para upload direto
     const formData = new FormData();
     formData.append('data_falta', document.getElementById('data_falta').value);
     formData.append('atestada', document.getElementById('atestada').checked);
@@ -612,15 +623,12 @@ document.getElementById('faltaForm').addEventListener('submit', async (e) => {
     if (arquivoInput.files.length > 0) {
         formData.append('arquivo_atestado', arquivoInput.files[0]);
     }
-
     try {
         const response = await fetch(url, {
             method: method,
             body: formData
         });
-
         const data = await response.json();
-
         if (data.success) {
             showAlert(data.message, 'success');
             fecharModal();
@@ -638,13 +646,15 @@ document.getElementById('faltaForm').addEventListener('submit', async (e) => {
     }
 });
 
-// Fechar modal ao clicar fora
 document.getElementById('modal').addEventListener('click', (e) => {
     if (e.target.id === 'modal') {
         fecharModal();
     }
 });
 
-// Carregar ao iniciar
-document.addEventListener('DOMContentLoaded', carregarFaltas);
+document.addEventListener('DOMContentLoaded', () => {
+    preencherMesAnoPicker();
+    carregarFaltas();
+    document.getElementById('mesFaltaPicker').addEventListener('change', carregarFaltas);
+});
 {% endblock %}

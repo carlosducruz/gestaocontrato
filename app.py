@@ -839,6 +839,7 @@ def api_ferias_criar(id):
         db.session.commit()
         return jsonify({'success': True, 'ferias': ferias.to_dict()})
     except Exception as e:
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 400
 
 # API: Atualizar férias
@@ -862,6 +863,7 @@ def api_ferias_atualizar(funcionario_id, ferias_id):
         db.session.commit()
         return jsonify({'success': True, 'ferias': ferias.to_dict()})
     except Exception as e:
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 400
 
 # API: Deletar férias
@@ -874,6 +876,7 @@ def api_ferias_deletar(funcionario_id, ferias_id):
         db.session.commit()
         return jsonify({'success': True})
     except Exception as e:
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 400
     
 
@@ -993,6 +996,7 @@ def api_sac_criar():
         })
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/sac/<int:id>', methods=['PUT'])
@@ -1054,6 +1058,7 @@ def api_sac_atualizar(id):
             'ocorrencia': ocorrencia.to_dict()
         })
     except Exception as e:
+        logger.error(f"Erro : {e}", exc_info=True)
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
@@ -1074,6 +1079,7 @@ def api_sac_deletar(id):
         
         return jsonify({'success': True, 'message': 'Ocorrência SAC excluída com sucesso'})
     except Exception as e:
+        logger.error(f"Erro : {e}", exc_info=True)
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
@@ -1194,6 +1200,7 @@ def api_ocorrencias_sistemicas_criar():
             'ocorrencia': ocorrencia.to_dict()
         })
     except Exception as e:
+        logger.error(f"Erro : {e}", exc_info=True)
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
@@ -1260,6 +1267,7 @@ def api_ocorrencias_sistemicas_atualizar(id):
             'ocorrencia': ocorrencia.to_dict()
         })
     except Exception as e:
+        logger.error(f"Erro : {e}", exc_info=True)
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
     
@@ -1285,6 +1293,7 @@ def api_ocorrencias_sistemicas_deletar(id):
         
         return jsonify({'success': True, 'message': 'Ocorrência sistêmica excluída com sucesso'})
     except Exception as e:
+        logger.error(f"Erro : {e}", exc_info=True)
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
     
@@ -1347,6 +1356,7 @@ def api_fornecedores_criar():
             'fornecedor': fornecedor.to_dict()
         })
     except Exception as e:
+        logger.error(f"Erro : {e}", exc_info=True)
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
@@ -1377,6 +1387,7 @@ def api_fornecedores_atualizar(id):
             'fornecedor': fornecedor.to_dict()
         })
     except Exception as e:
+        logger.error(f"Erro : {e}", exc_info=True)
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
@@ -1389,6 +1400,7 @@ def api_fornecedores_deletar(id):
         db.session.commit()
         return jsonify({'success': True, 'message': 'Fornecedor excluído com sucesso'})
     except Exception as e:
+        logger.error(f"Erro : {e}", exc_info=True)
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
     
@@ -1473,6 +1485,7 @@ def api_fornecedor_atendimentos_criar(fornecedor_id):
             'atendimento': atendimento.to_dict()
         })
     except Exception as e:
+        logger.error(f"Erro : {e}", exc_info=True)
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
@@ -1508,6 +1521,7 @@ def api_fornecedor_atendimentos_atualizar(fornecedor_id, atendimento_id):
             'atendimento': atendimento.to_dict()
         })
     except Exception as e:
+        logger.error(f"Erro : {e}", exc_info=True)
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
@@ -1524,6 +1538,7 @@ def api_fornecedor_atendimentos_deletar(fornecedor_id, atendimento_id):
         db.session.commit()
         return jsonify({'success': True, 'message': 'Atendimento excluído com sucesso'})
     except Exception as e:
+        logger.error(f"Erro : {e}", exc_info=True)
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
     
@@ -1679,6 +1694,7 @@ def api_register():
         return jsonify({'success': True, 'message': 'Usuário cadastrado com sucesso'})
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro ao cadastrar usuário: {e}", exc_info=True)
         return jsonify({'success': False, 'message': 'Erro ao cadastrar usuário'}), 500
 
 @app.route('/api/logout', methods=['POST'])
@@ -1759,6 +1775,7 @@ def api_funcionarios_criar():
         })
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/funcionarios/<int:id>', methods=['PUT'])
@@ -1800,6 +1817,7 @@ def api_funcionarios_atualizar(id):
         })
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/funcionarios/<int:id>', methods=['DELETE'])
@@ -1813,6 +1831,7 @@ def api_funcionarios_deletar(id):
         return jsonify({'success': True, 'message': 'Funcionário excluído com sucesso'})
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # API Routes - Evolução Salarial
@@ -1860,6 +1879,7 @@ def api_evolucao_criar(id):
         })
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # API Routes - Faltas
@@ -1915,6 +1935,7 @@ def api_faltas_criar(id):
         })
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/funcionarios/<int:funcionario_id>/faltas/<int:falta_id>', methods=['PUT'])
@@ -1955,6 +1976,7 @@ def api_faltas_atualizar(funcionario_id, falta_id):
         })
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/funcionarios/<int:funcionario_id>/faltas/<int:falta_id>', methods=['DELETE'])
@@ -1968,6 +1990,7 @@ def api_faltas_deletar(funcionario_id, falta_id):
         return jsonify({'success': True, 'message': 'Falta excluída com sucesso'})
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # API Routes - Folgas Trabalhadas
@@ -2013,6 +2036,7 @@ def api_folgas_criar(id):
         })
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/funcionarios/<int:funcionario_id>/folgas/<int:folga_id>', methods=['PUT'])
@@ -2037,6 +2061,7 @@ def api_folgas_atualizar(funcionario_id, folga_id):
         })
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/funcionarios/<int:funcionario_id>/folgas/<int:folga_id>', methods=['DELETE'])
@@ -2050,6 +2075,7 @@ def api_folgas_deletar(funcionario_id, folga_id):
         return jsonify({'success': True, 'message': 'Folga trabalhada excluída com sucesso'})
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # API Routes - Ocorrências Disciplinares
@@ -2103,6 +2129,7 @@ def api_ocorrencias_criar(id):
         })
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/funcionarios/<int:funcionario_id>/ocorrencias/<int:ocorrencia_id>', methods=['PUT'])
@@ -2132,6 +2159,7 @@ def api_ocorrencias_atualizar(funcionario_id, ocorrencia_id):
         })
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/funcionarios/<int:funcionario_id>/ocorrencias/<int:ocorrencia_id>', methods=['DELETE'])
@@ -2145,6 +2173,7 @@ def api_ocorrencias_deletar(funcionario_id, ocorrencia_id):
         return jsonify({'success': True, 'message': 'Ocorrência disciplinar excluída com sucesso'})
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # API Routes - Clientes
@@ -2239,6 +2268,7 @@ def api_clientes_criar():
         })
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro ao cadastrar cliente: {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/clientes/<int:id>', methods=['PUT'])
@@ -2363,6 +2393,7 @@ def api_enderecos_criar(cliente_id):
         })
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/clientes/<int:cliente_id>/enderecos/<int:endereco_id>', methods=['PUT'])
@@ -2410,6 +2441,7 @@ def api_enderecos_atualizar(cliente_id, endereco_id):
         })
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/clientes/<int:cliente_id>/enderecos/<int:endereco_id>', methods=['DELETE'])
@@ -2423,6 +2455,7 @@ def api_enderecos_deletar(cliente_id, endereco_id):
         return jsonify({'success': True, 'message': 'Endereço excluído com sucesso'})
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # API Routes - Atendimentos
@@ -2533,6 +2566,7 @@ def api_atendimentos_criar():
         })
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/atendimentos/<int:id>', methods=['PUT'])
@@ -2560,6 +2594,7 @@ def api_atendimentos_atualizar(id):
         })
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/atendimentos/<int:id>', methods=['DELETE'])
@@ -2573,6 +2608,7 @@ def api_atendimentos_deletar(id):
         return jsonify({'success': True, 'message': 'Atendimento excluído com sucesso'})
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
@@ -2630,6 +2666,7 @@ def api_regioes_criar():
         })
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/regioes/<int:id>', methods=['PUT'])
@@ -2656,6 +2693,7 @@ def api_regioes_atualizar(id):
         })
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro : {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/api/regioes/<int:id>', methods=['DELETE'])
@@ -2676,6 +2714,7 @@ def api_regioes_deletar(id):
         return jsonify({'success': True, 'message': 'Região excluída com sucesso'})
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Erro ao excluir região: {e}", exc_info=True)
         return jsonify({'success': False, 'message': str(e)}), 500
 
 # API Dashboard - Estatísticas filtradas por mês/ano
@@ -2776,6 +2815,7 @@ def api_dashboard():
 # Inicializar banco de dados
 def init_db():
     with app.app_context():
+        # Popular regiões iniciais se não existirem
         def popular_regioes_iniciais():
             """Popula as regiões iniciais se não existirem"""
             regioes_padrao = ['Norte', 'Sul', 'Leste', 'Oeste', 'Centro']
@@ -2796,6 +2836,9 @@ def init_db():
             db.session.add(admin)
             db.session.commit()
             print('✅ Usuário admin criado: admin/admin123')
+
+        popular_regioes_iniciais()
+        print('✅ Banco de dados inicializado')
 
 
 

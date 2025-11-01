@@ -1,8 +1,8 @@
 {% extends "dashboard_base.html" %}
 
-{% block title %}Ocorrências Sistêmicas{% endblock %}
+{% block title %}Ocorrências de Falhas Portaria Remota{% endblock %}
 
-{% block page_title %}Gestão de Ocorrências de Sistemas{% endblock %}
+{% block page_title %}Gestão de Ocorrências de Falhas Portaria Remota{% endblock %}
 
 {% block page_styles %}
 .toolbar {
@@ -389,7 +389,7 @@ async function carregarDados() {
 function carregarEstatisticas(estatisticas) {
     const statsContainer = document.getElementById('stats-container');
     statsContainer.innerHTML = `
-        <div class="stat-card priority-critical">
+        <div class="stat-card priority-critical" style="display: none;">
             <h3>Críticas</h3>
             <div class="value">${estatisticas.total_critica}</div>
         </div>
@@ -397,11 +397,11 @@ function carregarEstatisticas(estatisticas) {
             <h3>Reportadas</h3>
             <div class="value">${estatisticas.total_reportada}</div>
         </div>
-        <div class="stat-card status-analysis">
+        <div class="stat-card status-analysis" style="display: none;">
             <h3>Em Análise</h3>
             <div class="value">${estatisticas.total_analise}</div>
         </div>
-        <div class="stat-card status-correction">
+        <div class="stat-card status-correction" style="display: none;">
             <h3>Em Correção</h3>
             <div class="value">${estatisticas.total_correcao}</div>
         </div>

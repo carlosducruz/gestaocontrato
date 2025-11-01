@@ -60,8 +60,10 @@
     <input type="month" id="filtroMesAno" value="{{ now.strftime('%Y-%m') }}" style="padding:8px; font-size:16px; border-radius:5px; border:1px solid #ddd;">
 </div>
 
+
 <div class="stats-grid">
-    <div class="stat-card">
+    <!-- Grupo: Usuários e Clientes -->
+    <div class="stat-card" style="display: none;">
         <h3>Usuários Ativos</h3>
         <div class="value" id="stat-usuarios-ativos">{{ usuarios_ativos }}</div>
         <div class="trend">&nbsp;</div>
@@ -71,25 +73,72 @@
         <div class="value" id="stat-clientes-ativos">{{ clientes_ativos }}</div>
         <div class="trend">&nbsp;</div>
     </div>
+
+    <!-- Grupo: Atendimentos -->
     <div class="stat-card">
         <h3>Atendimentos - <span id="stat-mesano">{{ now.strftime('%m/%Y') }}</span></h3>
         <div class="value" id="stat-atendimentos-mes">{{ atendimentos_mes }}</div>
         <div class="trend">&nbsp;</div>
     </div>
+
+    <!-- Grupo: Portaria Remota -->
     <div class="stat-card">
-        <h3>Ocorrências - <span id="stat-mesano-oc">{{ now.strftime('%m/%Y') }}</span></h3>
+        <h3>Ocorrências de Falhas Portaria Remota - <span id="stat-mesano-oc">{{ now.strftime('%m/%Y') }}</span></h3>
         <div class="value" id="stat-ocorrencias-mes">{{ ocorrencias_sistemicas_mes }}</div>
-        <div class="trend">&nbsp;</div>
-    </div>
-    <div class="stat-card">
-        <h3>Pronta Resposta - <span id="stat-mesano-pr">{{ now.strftime('%m/%Y') }}</span></h3>
-        <div class="value" id="stat-pronta-resposta-mes">{{ atendimentos_pr_mes }}</div>
         <div class="trend">&nbsp;</div>
     </div>
     <div class="stat-card">
         <h3>Portarias Remotas</h3>
         <div class="value" id="stat-portarias-remotas">0</div>
         <div class="trend" id="stat-total-cameras">0 câmeras</div>
+    </div>
+
+    <!-- Grupo: Pronta Resposta -->
+    <div class="stat-card">
+        <h3>Pronta Resposta - <span id="stat-mesano-pr">{{ now.strftime('%m/%Y') }}</span></h3>
+        <div class="value" id="stat-pronta-resposta-mes">{{ atendimentos_pr_mes }}</div>
+        <div class="trend">&nbsp;</div>
+    </div>
+    <div class="stat-card">
+        <h3>Pronta Resposta / Coberturas <span id="stat-mesano-fornecedores">{{ now.strftime('%m/%Y') }}</span></h3>
+        <div class="value" id="stat-total-atendimentos-pr">0</div> 
+        <div class="trend">
+            <span id="stat-total-horas-pr">0h</span> | 
+            <span id="stat-total-valor-pr">R$ 0,00</span>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <h3>Funcionários Ativos</h3>
+        <div class="value" id="stat-total-funcionarios">{{ funcionarios_ativos }}</div>
+        <div class="trend">&nbsp;</div>
+    </div>
+
+    <!-- Grupo: Folgas e Faltas -->
+    <div class="stat-card">
+        <h3>Folgas Trabalhadas - <span id="stat-mesano-folgas">{{ now.strftime('%m/%Y') }}</span></h3>
+        <div class="value" id="stat-total-folgas">0</div>
+        <div class="trend" id="stat-total-valor-folgas">R$ 0,00</div>
+    </div>
+    <div class="stat-card">
+        <h3>Faltas - <span id="stat-mesano-faltas">{{ now.strftime('%m/%Y') }}</span></h3>
+        <div class="value" id="stat-total-faltas">0</div>
+        <div class="trend" id="stat-faltas-atestadas">0 atestadas</div>
+    </div>
+    <div class="stat-card">
+        <h3>Ocorrências Disciplinares - <span id="stat-mesano-ocorrencias">{{ now.strftime('%m/%Y') }}</span></h3>
+        <div class="value" id="stat-total-ocorrencias">0</div>
+        <div class="trend">&nbsp;</div>
+    </div>
+    <div class="stat-card">
+        <h3>Funcionarios de Férias - <span id="stat-mesano-ferias">{{ now.strftime('%m/%Y') }}</span></h3>
+        <div class="value" id="stat-total-ferias">0</div>
+        <div class="trend">&nbsp;</div>
+    </div>
+    <div class="stat-card">
+        <h3>Admissões/Demissões - <span id="stat-mesano-adm-dem">{{ now.strftime('%m/%Y') }}</span></h3>
+        <div class="value" id="stat-total-admissoes">0</div>
+        <div class="trend" id="stat-total-demissoes">0 demissões</div>
     </div>
 </div>
 
@@ -165,7 +214,111 @@
             </tbody>
         </table>
     </div>
+    <br/>
+    <div class="content-card" id="card-resumo-fornecedores">
+        <h2>Resumo de Pronta Resposta por Fornecedor (<span id="fornecedores-mesano">{{ now.strftime('%m/%Y') }}</span>)</h2>
+        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+            <thead>
+                <tr style="background:#f4f4f4;">
+                    <th style="padding:8px; border:1px solid #eee; text-align:left;">Fornecedor</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:right;">Horas</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:right;">Valor Total</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:right;">Qtd Atendimentos</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-resumo-fornecedores">
+                <tr><td colspan="4" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
 
+    <br/>
+    <div class="content-card" id="card-resumo-folgas">
+        <h2>Resumo de Folgas Trabalhadas por Funcionário (<span id="folgas-mesano">{{ now.strftime('%m/%Y') }}</span>)</h2>
+        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+            <thead>
+                <tr style="background:#f4f4f4;">
+                    <th style="padding:8px; border:1px solid #eee; text-align:left;">Funcionário</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:right;">Qtd Folgas</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:right;">Valor Total</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:left;">Motivo Principal</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-resumo-folgas">
+                <tr><td colspan="4" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="content-card" id="card-resumo-ocorrencias-disciplinares">
+        <h2>Resumo de Ocorrências Disciplinares por Tipo (<span id="ocorrencias-disciplinares-mesano">{{ now.strftime('%m/%Y') }}</span>)</h2>
+        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+            <thead>
+                <tr style="background:#f4f4f4;">
+                    <th style="padding:8px; border:1px solid #eee; text-align:left;">Tipo de Ocorrência</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:right;">Quantidade</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:left;">Motivo Principal</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-resumo-ocorrencias-disciplinares">
+                <tr><td colspan="3" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <br/>
+    <div class="content-card" id="card-resumo-ferias">
+        <h2>Resumo de Férias no Período (<span id="ferias-mesano">{{ now.strftime('%m/%Y') }}</span>)</h2>
+        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+            <thead>
+                <tr style="background:#f4f4f4;">
+                    <th style="padding:8px; border:1px solid #eee; text-align:left;">Funcionário</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:center;">Período</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:right;">Dias</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:center;">Abono</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-resumo-ferias">
+                <tr><td colspan="4" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+ 
+    <br/>
+    <div class="content-card" id="card-resumo-admissoes">
+        <h2>Admissões no Mês (<span id="admissoes-mesano">{{ now.strftime('%m/%Y') }}</span>)</h2>
+        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+            <thead>
+                <tr style="background:#f4f4f4;">
+                    <th style="padding:8px; border:1px solid #eee; text-align:left;">Funcionário</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:left;">Cargo</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:center;">Data Admissão</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-resumo-admissoes">
+                <tr><td colspan="3" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <br/>
+    <div class="content-card" id="card-resumo-demissoes">
+        <h2>Demissões no Mês (<span id="demissoes-mesano">{{ now.strftime('%m/%Y') }}</span>)</h2>
+        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+            <thead>
+                <tr style="background:#f4f4f4;">
+                    <th style="padding:8px; border:1px solid #eee; text-align:left;">Funcionário</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:left;">Cargo</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:center;">Data Demissão</th>
+                    <th style="padding:8px; border:1px solid #eee; text-align:left;">Motivo</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-resumo-demissoes">
+                <tr><td colspan="4" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Carregando...</td></tr>
+            </tbody>
+        </table>
+    </div>
+    
     {% block page_scripts %}
     <script>
     async function atualizarDashboard(mesAno) {
@@ -186,6 +339,7 @@
             document.getElementById('ocorrencias-mesano').textContent = mesAno.split('-').reverse().join('/');
             document.getElementById('stat-portarias-remotas').textContent = data.portarias_remotas || 0;
             document.getElementById('stat-total-cameras').textContent = (data.total_cameras_portarias || 0) + ' câmeras';
+            document.getElementById('stat-total-funcionarios').textContent = data.total_funcionarios_ativos || 0;
 
             // Atualiza tabela de resumo
             const tbody = document.getElementById('tbody-resumo-clientes');
@@ -241,7 +395,144 @@
             } else {
                 tbodyPortarias.innerHTML = `<tr><td colspan="4" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Nenhuma portaria remota ativa encontrada.</td></tr>`;
             }
+                        
+            document.getElementById('stat-mesano-fornecedores').textContent = mesAno.split('-').reverse().join('/');
+            document.getElementById('stat-total-atendimentos-pr').textContent = data.total_atendimentos_pr || 0;
+            document.getElementById('stat-total-horas-pr').textContent = (data.total_horas_pr || 0) + 'h';
+            document.getElementById('stat-total-valor-pr').textContent = 'R$ ' + (data.total_valor_pr || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+           
+            // Atualiza tabela de fornecedores
+            document.getElementById('fornecedores-mesano').textContent = mesAno.split('-').reverse().join('/');
+            const tbodyFornecedores = document.getElementById('tbody-resumo-fornecedores');
+            tbodyFornecedores.innerHTML = '';
+            if (data.fornecedores_pr_detalhes && data.fornecedores_pr_detalhes.length > 0) {
+                data.fornecedores_pr_detalhes.forEach(fornecedor => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="padding:8px; border:1px solid #eee;">${fornecedor.nome_empresa}</td>
+                        <td style="padding:8px; border:1px solid #eee; text-align:right;">${fornecedor.total_horas.toFixed(1)}h</td>
+                        <td style="padding:8px; border:1px solid #eee; text-align:right;">R$ ${fornecedor.total_valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        <td style="padding:8px; border:1px solid #eee; text-align:right;">${fornecedor.qtd_atendimentos}</td>
+                    `;
+                    tbodyFornecedores.appendChild(tr);
+                });
+            } else {
+                tbodyFornecedores.innerHTML = `<tr><td colspan="4" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Nenhum atendimento de pronta resposta registrado este mês.</td></tr>`;
+            }
             
+
+            document.getElementById('stat-mesano-folgas').textContent = mesAno.split('-').reverse().join('/');
+            document.getElementById('stat-total-folgas').textContent = data.total_folgas || 0;
+            document.getElementById('stat-total-valor-folgas').textContent = 'R$ ' + (data.total_valor_folgas || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+
+            // Atualiza tabela de folgas
+            document.getElementById('folgas-mesano').textContent = mesAno.split('-').reverse().join('/');
+            const tbodyFolgas = document.getElementById('tbody-resumo-folgas');
+            tbodyFolgas.innerHTML = '';
+            if (data.folgas_detalhes && data.folgas_detalhes.length > 0) {
+                data.folgas_detalhes.forEach(folga => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="padding:8px; border:1px solid #eee;">${folga.funcionario_nome}</td>
+                        <td style="padding:8px; border:1px solid #eee; text-align:right;">${folga.qtd_folgas}</td>
+                        <td style="padding:8px; border:1px solid #eee; text-align:right;">R$ ${folga.total_valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                        <td style="padding:8px; border:1px solid #eee;">${folga.motivo_principal}</td>
+                    `;
+                    tbodyFolgas.appendChild(tr);
+                });
+            } else {
+                tbodyFolgas.innerHTML = `<tr><td colspan="4" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Nenhuma folga trabalhada registrada este mês.</td></tr>`;
+            }
+
+            document.getElementById('stat-mesano-faltas').textContent = mesAno.split('-').reverse().join('/');
+            document.getElementById('stat-total-faltas').textContent = data.total_faltas || 0;
+            document.getElementById('stat-faltas-atestadas').textContent = (data.faltas_atestadas || 0) + ' atestadas';
+
+
+            document.getElementById('stat-mesano-ocorrencias').textContent = mesAno.split('-').reverse().join('/');
+            document.getElementById('stat-total-ocorrencias').textContent = data.total_ocorrencias_disciplinares || 0;
+
+            // Atualiza tabela de ocorrências disciplinares
+            document.getElementById('ocorrencias-disciplinares-mesano').textContent = mesAno.split('-').reverse().join('/');
+            const tbodyOcorrenciasDisciplinares = document.getElementById('tbody-resumo-ocorrencias-disciplinares');
+            tbodyOcorrenciasDisciplinares.innerHTML = '';
+            if (data.ocorrencias_disciplinares_detalhes && data.ocorrencias_disciplinares_detalhes.length > 0) {
+                data.ocorrencias_disciplinares_detalhes.forEach(ocorrencia => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="padding:8px; border:1px solid #eee;">${ocorrencia.tipo}</td>
+                        <td style="padding:8px; border:1px solid #eee; text-align:right;">${ocorrencia.quantidade}</td>
+                        <td style="padding:8px; border:1px solid #eee;">${ocorrencia.motivo_principal}</td>
+                    `;
+                    tbodyOcorrenciasDisciplinares.appendChild(tr);
+                });
+            } else {
+                tbodyOcorrenciasDisciplinares.innerHTML = `<tr><td colspan="3" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Nenhuma ocorrência disciplinar registrada este mês.</td></tr>`;
+            }
+
+            document.getElementById('stat-mesano-ferias').textContent = mesAno.split('-').reverse().join('/');
+            document.getElementById('stat-total-ferias').textContent = data.total_ferias || 0;
+
+            // Atualiza tabela de férias
+            document.getElementById('ferias-mesano').textContent = mesAno.split('-').reverse().join('/');
+            const tbodyFerias = document.getElementById('tbody-resumo-ferias');
+            tbodyFerias.innerHTML = '';
+            if (data.ferias_detalhes && data.ferias_detalhes.length > 0) {
+                data.ferias_detalhes.forEach(ferias => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="padding:8px; border:1px solid #eee;">${ferias.funcionario_nome}</td>
+                        <td style="padding:8px; border:1px solid #eee; text-align:center;">${ferias.periodo}</td>
+                        <td style="padding:8px; border:1px solid #eee; text-align:right;">${ferias.dias}</td>
+                        <td style="padding:8px; border:1px solid #eee; text-align:center;">${ferias.abono ? '✅' : '❌'}</td>
+                    `;
+                    tbodyFerias.appendChild(tr);
+                });
+            } else {
+                tbodyFerias.innerHTML = `<tr><td colspan="4" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Nenhuma férias registrada neste período.</td></tr>`;
+            }
+
+            document.getElementById('stat-mesano-adm-dem').textContent = mesAno.split('-').reverse().join('/');
+            document.getElementById('stat-total-admissoes').textContent = data.total_admissoes || 0;
+            document.getElementById('stat-total-demissoes').textContent = (data.total_demissoes || 0) + ' demissões';
+
+            // Atualiza tabela de admissões
+            document.getElementById('admissoes-mesano').textContent = mesAno.split('-').reverse().join('/');
+            const tbodyAdmissoes = document.getElementById('tbody-resumo-admissoes');
+            tbodyAdmissoes.innerHTML = '';
+            if (data.admissoes_detalhes && data.admissoes_detalhes.length > 0) {
+                data.admissoes_detalhes.forEach(admissao => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="padding:8px; border:1px solid #eee;">${admissao.nome}</td>
+                        <td style="padding:8px; border:1px solid #eee;">${admissao.cargo}</td>
+                        <td style="padding:8px; border:1px solid #eee; text-align:center;">${admissao.data_admissao}</td>
+                    `;
+                    tbodyAdmissoes.appendChild(tr);
+                });
+            } else {
+                tbodyAdmissoes.innerHTML = `<tr><td colspan="3" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Nenhuma admissão registrada este mês.</td></tr>`;
+            }
+
+            // Atualiza tabela de demissões
+            document.getElementById('demissoes-mesano').textContent = mesAno.split('-').reverse().join('/');
+            const tbodyDemissoes = document.getElementById('tbody-resumo-demissoes');
+            tbodyDemissoes.innerHTML = '';
+            if (data.demissoes_detalhes && data.demissoes_detalhes.length > 0) {
+                data.demissoes_detalhes.forEach(demissao => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="padding:8px; border:1px solid #eee;">${demissao.nome}</td>
+                        <td style="padding:8px; border:1px solid #eee;">${demissao.cargo}</td>
+                        <td style="padding:8px; border:1px solid #eee; text-align:center;">${demissao.data_demissao}</td>
+                        <td style="padding:8px; border:1px solid #eee;">${demissao.motivo || 'Não informado'}</td>
+                    `;
+                    tbodyDemissoes.appendChild(tr);
+                });
+            } else {
+                tbodyDemissoes.innerHTML = `<tr><td colspan="4" style="padding:8px; border:1px solid #eee; text-align:center; color:#aaa;">Nenhuma demissão registrada este mês.</td></tr>`;
+            }
+
         } catch (error) {
             alert('Erro ao buscar dados do dashboard');
         }

@@ -674,8 +674,8 @@ def sac_editar(id):
 @app.route('/sac/<int:id>/detalhes')
 @login_required
 def sac_detalhes(id):
-    ocorrencia = Sac.query.get_or_404(id)
-    return render_template('sac_detalhes.html', user=current_user, ocorrencia=ocorrencia)
+    sac = Sac.query.get_or_404(id)
+    return render_template('sac_detalhes.html', sac=sac, user=current_user)
 
 @app.route('/fornecedores')
 @login_required
@@ -743,7 +743,9 @@ def home():
             'media_tempo': media_tempo,
             'maior_tempo': maior_tempo
         })
-    # Contar usuários ativos
+
+    # Contar funcionarios, usuários ativos
+    funcionarios_ativos = Funcionario.query.filter_by(ativo=True).count()
     usuarios_ativos = User.query.count()
     clientes_ativos = Cliente.query.filter_by(ativo=True).count()
     from datetime import datetime
@@ -767,6 +769,7 @@ def home():
         user=current_user,
         usuarios_ativos=usuarios_ativos,
         clientes_ativos=clientes_ativos,
+        funcionarios_ativos=funcionarios_ativos, 
         atendimentos_mes=atendimentos_mes,
         ocorrencias_sistemicas_mes=ocorrencias_sistemicas_mes,
         atendimentos_pr_mes=atendimentos_pr_mes,
@@ -2824,6 +2827,208 @@ def api_dashboard():
             'rondas_virtuais': endereco.possui_rondas_virtuais
         })
 
+
+        # Resumo de Pronta Resposta por Fornecedor
+        fornecedores_pr = Fornecedor.query.filter_by(pronta_resposta=True, ativo=True).all()
+        fornecedores_pr_detalhes = []
+        total_horas_pr = 0
+        total_valor_pr = 0
+        total_atendimentos_pr = 0  # Adicione esta variável
+
+    for fornecedor in fornecedores_pr:
+        # Inicializar variáveis para cada fornecedor
+        total_horas_fornecedor = 0
+        total_valor_fornecedor = 0
+        qtd_atendimentos = 0
+        # Filtrar atendimentos do mês/ano
+        atendimentos_fornecedor = AtendimentoProntaResposta.query.filter(
+            AtendimentoProntaResposta.fornecedor_id == fornecedor.id,
+            db.extract('month', AtendimentoProntaResposta.data_atendimento) == mes_num,
+            db.extract('year', AtendimentoProntaResposta.data_atendimento) == ano
+        ).all()
+        
+        if atendimentos_fornecedor:
+            total_horas_fornecedor = sum(float(a.quantidade_horas) for a in atendimentos_fornecedor)
+            total_valor_fornecedor = sum(float(a.valor_total) for a in atendimentos_fornecedor)
+            qtd_atendimentos = len(atendimentos_fornecedor)
+            
+            fornecedores_pr_detalhes.append({
+                'nome_empresa': fornecedor.nome_empresa,
+                'total_horas': total_horas_fornecedor,
+                'total_valor': total_valor_fornecedor,
+                'qtd_atendimentos': qtd_atendimentos
+            })
+        
+        total_horas_pr += total_horas_fornecedor
+        total_valor_pr += total_valor_fornecedor
+        total_atendimentos_pr += qtd_atendimentos  # Adicione esta linha
+
+
+    # Ordenar por valor total decrescente
+    fornecedores_pr_detalhes.sort(key=lambda x: x['total_valor'], reverse=True)
+
+    #Resumo de Folgas Trabalhadas
+    folgas_mes = FolgaTrabalhada.query.filter(
+        db.extract('month', FolgaTrabalhada.data_folga) == mes_num,
+        db.extract('year', FolgaTrabalhada.data_folga) == ano
+    ).all()
+
+    total_folgas = len(folgas_mes)
+    total_valor_folgas = sum(float(f.valor_diaria) for f in folgas_mes)
+
+
+    # Agrupar por funcionário
+    folgas_por_funcionario = {}
+    for folga in folgas_mes:
+        funcionario_id = folga.funcionario_id
+        if funcionario_id not in folgas_por_funcionario:
+            folgas_por_funcionario[funcionario_id] = {
+                'funcionario_nome': folga.funcionario.nome,
+                'qtd_folgas': 0,
+                'total_valor': 0,
+                'motivos': {}
+            }
+        folgas_por_funcionario[funcionario_id]['qtd_folgas'] += 1
+        folgas_por_funcionario[funcionario_id]['total_valor'] += float(folga.valor_diaria)
+        motivo = folga.motivo
+        if motivo not in folgas_por_funcionario[funcionario_id]['motivos']:
+            folgas_por_funcionario[funcionario_id]['motivos'][motivo] = 0
+        folgas_por_funcionario[funcionario_id]['motivos'][motivo] += 1
+
+    # Preparar detalhes para o frontend (fora do loop)
+    folgas_detalhes = []
+    for funcionario_id, dados in folgas_por_funcionario.items():
+        motivo_principal = max(dados['motivos'].items(), key=lambda x: x[1])[0] if dados['motivos'] else 'N/A'
+        folgas_detalhes.append({
+            'funcionario_nome': dados['funcionario_nome'],
+            'qtd_folgas': dados['qtd_folgas'],
+            'total_valor': round(dados['total_valor'], 2),
+            'motivo_principal': motivo_principal
+        })
+    folgas_detalhes.sort(key=lambda x: x['total_valor'], reverse=True)
+
+    # Resumo de Faltas
+    faltas_mes = Falta.query.filter(
+        db.extract('month', Falta.data_falta) == mes_num,
+        db.extract('year', Falta.data_falta) == ano
+    ).all()
+
+    total_faltas = len(faltas_mes)
+    faltas_atestadas = sum(1 for f in faltas_mes if f.atestada)
+    total_funcionarios_ativos = Funcionario.query.filter_by(ativo=True).count()
+
+    # Resumo de Ocorrências Disciplinares
+    ocorrencias_disciplinares_mes = OcorrenciaDisciplinar.query.filter(
+        db.extract('month', OcorrenciaDisciplinar.data_ocorrencia) == mes_num,
+        db.extract('year', OcorrenciaDisciplinar.data_ocorrencia) == ano
+    ).all()
+
+    total_ocorrencias_disciplinares = len(ocorrencias_disciplinares_mes)
+
+    # Agrupar por tipo
+    ocorrencias_por_tipo = {}
+    for ocorrencia in ocorrencias_disciplinares_mes:
+        tipo = ocorrencia.tipo
+        if tipo not in ocorrencias_por_tipo:
+            ocorrencias_por_tipo[tipo] = {
+                'quantidade': 0,
+                'motivos': {}
+            }
+        
+        ocorrencias_por_tipo[tipo]['quantidade'] += 1
+        
+        # Contar motivos
+        motivo = ocorrencia.motivo
+        if motivo not in ocorrencias_por_tipo[tipo]['motivos']:
+            ocorrencias_por_tipo[tipo]['motivos'][motivo] = 0
+        ocorrencias_por_tipo[tipo]['motivos'][motivo] += 1
+
+    # Preparar detalhes para o frontend
+    ocorrencias_disciplinares_detalhes = []
+    for tipo, dados in ocorrencias_por_tipo.items():
+        # Encontrar motivo principal
+        motivo_principal = max(dados['motivos'].items(), key=lambda x: x[1])[0] if dados['motivos'] else 'N/A'
+        
+        ocorrencias_disciplinares_detalhes.append({
+            'tipo': tipo,
+            'quantidade': dados['quantidade'],
+            'motivo_principal': motivo_principal
+        })
+
+    ocorrencias_disciplinares_detalhes.sort(key=lambda x: x['quantidade'], reverse=True)
+
+
+    # Resumo de Férias
+    from datetime import datetime
+
+    # Buscar férias que começam ou terminam no mês/ano específico
+    ferias_mes = Ferias.query.filter(
+        db.or_(
+            db.and_(
+                db.extract('month', Ferias.data_inicio) == mes_num,
+                db.extract('year', Ferias.data_inicio) == ano
+            ),
+            db.and_(
+                db.extract('month', Ferias.data_fim) == mes_num,
+                db.extract('year', Ferias.data_fim) == ano
+            )
+        )
+    ).all()
+
+    total_ferias = len(ferias_mes)
+
+    # Preparar detalhes para o frontend
+    ferias_detalhes = []
+    for ferias in ferias_mes:
+        ferias_detalhes.append({
+            'funcionario_nome': ferias.funcionario.nome if ferias.funcionario else 'N/A',
+            'periodo': f"{ferias.data_inicio.strftime('%d/%m/%Y')} a {ferias.data_fim.strftime('%d/%m/%Y')}",
+            'dias': ferias.dias,
+            'abono': ferias.abono
+        })
+
+    # Ordenar por data de início (mais recente primeiro)
+    ferias_detalhes.sort(key=lambda x: datetime.strptime(x['periodo'].split(' a ')[0], '%d/%m/%Y'), reverse=True)
+
+    # Resumo de Admissões e Demissões
+    admissoes_mes = Funcionario.query.filter(
+        db.extract('month', Funcionario.data_admissao) == mes_num,
+        db.extract('year', Funcionario.data_admissao) == ano
+    ).all()
+
+    demissoes_mes = Funcionario.query.filter(
+        db.extract('month', Funcionario.data_demissao) == mes_num,
+        db.extract('year', Funcionario.data_demissao) == ano
+    ).all()
+
+    total_admissoes = len(admissoes_mes)
+    total_demissoes = len(demissoes_mes)
+
+    # Preparar detalhes para o frontend
+    admissoes_detalhes = []
+    for funcionario in admissoes_mes:
+        admissoes_detalhes.append({
+            'nome': funcionario.nome,
+            'cargo': funcionario.cargo,
+            'data_admissao': funcionario.data_admissao.strftime('%d/%m/%Y')
+        })
+
+    # Ordenar admissões por data (mais recente primeiro)
+    admissoes_detalhes.sort(key=lambda x: datetime.strptime(x['data_admissao'], '%d/%m/%Y'), reverse=True)
+
+    demissoes_detalhes = []
+    for funcionario in demissoes_mes:
+        demissoes_detalhes.append({
+            'nome': funcionario.nome,
+            'cargo': funcionario.cargo,
+            'data_demissao': funcionario.data_demissao.strftime('%d/%m/%Y') if funcionario.data_demissao else 'N/A',
+            'motivo': funcionario.motivo_demissao
+        })
+
+    # Ordenar demissões por data (mais recente primeiro)
+    demissoes_detalhes.sort(key=lambda x: datetime.strptime(x['data_demissao'], '%d/%m/%Y'), reverse=True)
+
+
     return jsonify({
         'usuarios_ativos': usuarios_ativos,
         'clientes_ativos': clientes_ativos,
@@ -2834,7 +3039,25 @@ def api_dashboard():
         'resumo_ocorrencias': resumo_ocorrencias,
         'portarias_remotas': portarias_remotas_count,
         'total_cameras_portarias': total_cameras_portarias,
-        'portarias_detalhes': portarias_detalhes
+        'portarias_detalhes': portarias_detalhes,
+        'total_atendimentos_pr': total_atendimentos_pr,
+        'total_horas_pr': round(total_horas_pr, 2),
+        'total_valor_pr': round(total_valor_pr, 2),
+        'fornecedores_pr_detalhes': fornecedores_pr_detalhes,
+        'total_folgas': total_folgas,
+        'total_valor_folgas': round(total_valor_folgas, 2),
+        'folgas_detalhes': folgas_detalhes,
+        'total_faltas': total_faltas,
+        'faltas_atestadas': faltas_atestadas,
+        'total_funcionarios_ativos': total_funcionarios_ativos,
+        'total_ocorrencias_disciplinares': total_ocorrencias_disciplinares,
+        'ocorrencias_disciplinares_detalhes': ocorrencias_disciplinares_detalhes,
+        'total_ferias': total_ferias,
+        'ferias_detalhes': ferias_detalhes,
+        'total_admissoes': total_admissoes,
+        'total_demissoes': total_demissoes,
+        'admissoes_detalhes': admissoes_detalhes,
+        'demissoes_detalhes': demissoes_detalhes
     })
 
 # Inicializar banco de dados

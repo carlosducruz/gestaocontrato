@@ -1,0 +1,311 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Relatórios{% endblock %}
+
+{% block page_title %}Relatórios{% endblock %}
+
+{% block page_content %}
+<div class="reports-grid">
+    
+    <!-- Relatório de RH -->
+    <div class="report-card">
+        <div class="report-icon">👥</div>
+        <h3>Relatório de Recursos Humanos</h3>
+        <p>Faltas, férias, ocorrências disciplinares e movimentação de funcionários.</p>
+        <p>Lista completa de todos os funcionários ativos na empresa com dados atualizados.</p>
+        <button onclick="openReportModal('rh')" class="btn-report">Funcionários Ativos</button>
+    </div>
+
+    <!-- Relatório de Atendimentos -->
+    <div class="report-card disabled">
+        <div class="report-icon">📈</div>
+        <h3>Relatório de Atendimentos</h3>
+        <p>Relatório detalhado de todos os atendimentos realizados por período, com filtros por cliente, funcionário e região.</p>
+        <button class="btn-report" disabled>Indisponível</button>
+        <div class="card-overlay">Indisponível</div>
+    </div>
+
+    <!-- Relatório Financeiro -->
+    <div class="report-card disabled">
+        <div class="report-icon">💰</div>
+        <h3>Relatório Financeiro</h3>
+        <p>Consolidação de custos com pronta resposta, folgas trabalhadas e análise de despesas operacionais.</p>
+        <button class="btn-report" disabled>Indisponível</button>
+        <div class="card-overlay">Indisponível</div>
+    </div>
+
+
+ 
+
+    <!-- Relatório de Clientes -->
+    <div class="report-card disabled">
+        <div class="report-icon">🏢</div>
+        <h3>Relatório de Clientes</h3>
+        <p>Portarias remotas, atendimentos por cliente, contratos e satisfação do SAC.</p>
+        <button class="btn-report" disabled>Indisponível</button>
+        <div class="card-overlay">Indisponível</div>
+    </div>
+
+    <!-- Relatório de Fornecedores -->
+    <div class="report-card disabled">
+        <div class="report-icon">🏭</div>
+        <h3>Relatório de Fornecedores</h3>
+        <p>Desempenho de fornecedores de pronta resposta, custos e quantidade de atendimentos.</p>
+        <button class="btn-report" disabled>Indisponível</button>
+        <div class="card-overlay">Indisponível</div>
+    </div>
+
+    <!-- Relatório de Ocorrências -->
+    <div class="report-card disabled">
+        <div class="report-icon">⚠️</div>
+        <h3>Relatório de Ocorrências</h3>
+        <p>Ocorrências sistêmicas e do SAC, tempos de resolução e análise de prioridades.</p>
+        <button class="btn-report" disabled>Indisponível</button>
+        <div class="card-overlay">Indisponível</div>
+    </div>
+
+</div>
+
+<!-- Modal para seleção de período -->
+<div id="reportModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeReportModal()">&times;</span>
+        <h3 id="modalTitle">Selecionar Período</h3>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="dataInicio">Data Início:</label>
+                <input type="date" id="dataInicio" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="dataFim">Data Fim:</label>
+                <input type="date" id="dataFim" class="form-control">
+            </div>
+            <div id="additionalFilters" style="display: none;">
+                <!-- Filtros adicionais específicos para cada relatório -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeReportModal()" class="btn btn-secondary">Cancelar</button>
+            <button onclick="generateReport()" class="btn btn-primary">Gerar Relatório</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.reports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 25px;
+    margin-top: 20px;
+}
+
+.report-card {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border-left: 5px solid #007bff;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.report-card.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    position: relative;
+}
+.card-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.7);
+    color: #888;
+    font-size: 1.3em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    z-index: 2;
+    pointer-events: none;
+    font-weight: bold;
+}
+
+.report-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+}
+
+.report-icon {
+    font-size: 2.5em;
+    margin-bottom: 15px;
+}
+
+.report-card h3 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+    font-size: 1.3em;
+}
+
+.report-card p {
+    color: #7f8c8d;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.btn-report {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.btn-report:hover {
+    background: #0056b3;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 30px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: #000;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+</style>
+
+<script>
+let currentReportType = '';
+
+function openReportModal(type) {
+    currentReportType = type;
+    const modal = document.getElementById('reportModal');
+    const title = document.getElementById('modalTitle');
+
+    const titles = {
+        'atendimentos': 'Relatório de Atendimentos',
+        'financeiro': 'Relatório Financeiro',
+        'rh': 'Relatório de Recursos Humanos',
+        'clientes': 'Relatório de Clientes',
+        'fornecedores': 'Relatório de Fornecedores',
+        'ocorrencias': 'Relatório de Ocorrências'
+    };
+
+    title.textContent = titles[type] || 'Relatório';
+    modal.style.display = 'block';
+
+    // Set default dates (current month)
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+    document.getElementById('dataInicio').value = firstDay.toISOString().split('T')[0];
+    document.getElementById('dataFim').value = lastDay.toISOString().split('T')[0];
+}
+
+function closeReportModal() {
+    document.getElementById('reportModal').style.display = 'none';
+}
+
+function generateReport() {
+    const dataInicio = document.getElementById('dataInicio').value;
+    const dataFim = document.getElementById('dataFim').value;
+
+    if (!dataInicio || !dataFim) {
+        alert('Por favor, selecione ambas as datas.');
+        return;
+    }
+
+    // RH: Funcionários Ativos - chama URL específica
+    if (currentReportType === 'rh') {
+        window.open(`/relatorios/rh/funcionarios-ativos?inicio=${dataInicio}&fim=${dataFim}`, '_blank');
+    } else {
+        // Demais relatórios
+        window.open(`/api/relatorios/${currentReportType}?inicio=${dataInicio}&fim=${dataFim}`, '_blank');
+    }
+    closeReportModal();
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('reportModal');
+    if (event.target === modal) {
+        closeReportModal();
+    }
+}
+</script>
+{% endblock %}

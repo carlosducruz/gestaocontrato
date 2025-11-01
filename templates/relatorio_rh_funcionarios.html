@@ -1,0 +1,195 @@
+{% extends "dashboard_base.html" %}
+
+{% block title %}Relatório de Funcionários Ativos{% endblock %}
+
+{% block page_title %}Relatório de Funcionários Ativos{% endblock %}
+
+{% block page_content %}
+<div class="report-actions" style="margin-bottom: 20px;">
+    <button onclick="exportToPDF()" class="btn btn-primary">📄 Exportar PDF</button>
+    <button onclick="exportToExcel()" class="btn btn-success">📊 Exportar Excel</button>
+    <button onclick="window.print()" class="btn btn-secondary">🖨️ Imprimir</button>
+</div>
+
+<div class="report-header" style="background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+    <h2 id="reportTitle">Relatório de Funcionários Ativos</h2>
+    <p id="reportDate" style="color: #666; margin: 5px 0;">Data de geração: Carregando...</p>
+    <p id="reportTotal" style="color: #666; margin: 5px 0;">Total de funcionários: Carregando...</p>
+</div>
+
+<div class="report-content">
+    <div id="loadingMessage" style="text-align: center; padding: 40px;">
+        <p>Carregando dados do relatório...</p>
+    </div>
+    <table id="reportTable" style="width: 100%; border-collapse: collapse; background: white; display: none;">
+        <thead>
+            <tr style="background: #f8f9fa;">
+                <th style="padding: 12px; border: 1px solid #dee2e6; text-align: left;">Nome</th>
+                <th style="padding: 12px; border: 1px solid #dee2e6; text-align: left;">RE</th>
+                <th style="padding: 12px; border: 1px solid #dee2e6; text-align: left;">Cargo</th>
+                <th style="padding: 12px; border: 1px solid #dee2e6; text-align: center;">Data Admissão</th>
+                <th style="padding: 12px; border: 1px solid #dee2e6; text-align: right;">Salário Atual</th>
+                <th style="padding: 12px; border: 1px solid #dee2e6; text-align: left;">Tempo de Empresa</th>
+                <th style="padding: 12px; border: 1px solid #dee2e6; text-align: center;">Última Evolução</th>
+            </tr>
+        </thead>
+        <tbody id="reportTableBody">
+            <!-- Os dados serão preenchidos via JavaScript -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+// Carregar relatório quando a página estiver pronta
+
+document.addEventListener('DOMContentLoaded', function() {
+    carregarRelatorioFuncionariosAtivos();
+});
+
+async function carregarRelatorioFuncionariosAtivos() {
+    try {
+        console.log('Iniciando carregamento do relatório...');
+        // Pega os parâmetros de data do contexto Jinja
+        const inicio = "{{ inicio|default('') }}";
+        const fim = "{{ fim|default('') }}";
+        let url = '/api/relatorios/rh/funcionarios-ativos';
+        const params = [];
+        if (inicio) params.push(`inicio=${encodeURIComponent(inicio)}`);
+        if (fim) params.push(`fim=${encodeURIComponent(fim)}`);
+        if (params.length > 0) {
+            url += '?' + params.join('&');
+        }
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log('Dados recebidos:', data);
+        if (data.success) {
+            exibirRelatorio(data.relatorio);
+        } else {
+            throw new Error(data.message || 'Erro ao carregar relatório');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar relatório:', error);
+        document.getElementById('loadingMessage').innerHTML = `
+            <div style="color: red; background: #ffe6e6; padding: 20px; border-radius: 5px;">
+                <h3>Erro ao carregar relatório</h3>
+                <p>${error.message}</p>
+                <button onclick="carregarRelatorioFuncionariosAtivos()" class="btn btn-primary">Tentar Novamente</button>
+            </div>
+        `;
+    }
+}
+
+function exibirRelatorio(relatorio) {
+    // Esconder mensagem de carregamento e mostrar tabela
+    document.getElementById('loadingMessage').style.display = 'none';
+    document.getElementById('reportTable').style.display = 'table';
+    
+    // Atualizar cabeçalho
+    document.getElementById('reportTitle').textContent = relatorio.titulo;
+    document.getElementById('reportDate').textContent = 'Data de geração: ' + relatorio.data_geracao;
+    document.getElementById('reportTotal').textContent = 'Total de funcionários: ' + relatorio.total_funcionarios;
+    
+    // Preencher tabela
+    const tbody = document.getElementById('reportTableBody');
+    tbody.innerHTML = '';
+    
+    if (relatorio.dados && relatorio.dados.length > 0) {
+        relatorio.dados.forEach(funcionario => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="padding: 10px; border: 1px solid #dee2e6;">${funcionario.nome}</td>
+                <td style="padding: 10px; border: 1px solid #dee2e6;">${funcionario.re}</td>
+                <td style="padding: 10px; border: 1px solid #dee2e6;">${funcionario.cargo}</td>
+                <td style="padding: 10px; border: 1px solid #dee2e6; text-align: center;">${funcionario.data_admissao}</td>
+                <td style="padding: 10px; border: 1px solid #dee2e6; text-align: right;">${funcionario.salario_atual}</td>
+                <td style="padding: 10px; border: 1px solid #dee2e6;">${funcionario.tempo_empresa}</td>
+                <td style="padding: 10px; border: 1px solid #dee2e6; text-align: center;">${funcionario.ultima_evolucao}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } else {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" style="padding: 20px; text-align: center; color: #666;">
+                    Nenhum funcionário ativo encontrado.
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function exportToPDF() {
+    alert('Funcionalidade de exportação PDF em desenvolvimento');
+}
+
+function exportToExcel() {
+    alert('Funcionalidade de exportação Excel em desenvolvimento');
+}
+
+// Abrir console para debug (remova em produção)
+console.log('Página de relatório carregada');
+</script>
+
+<style>
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-right: 10px;
+    font-size: 14px;
+}
+
+.btn-primary { background: #007bff; color: white; }
+.btn-success { background: #28a745; color: white; }
+.btn-secondary { background: #6c757d; color: white; }
+
+.report-actions {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+th {
+    background: #f8f9fa;
+    font-weight: 600;
+}
+
+tr:nth-child(even) {
+    background: #f8f9fa;
+}
+
+tr:hover {
+    background: #e9ecef;
+}
+
+/* Estilos para impressão */
+@media print {
+    .report-actions { display: none; }
+    .sidebar { display: none; }
+    .header { display: none; }
+    .report-header { 
+        background: white !important; 
+        border: 2px solid #000 !important;
+    }
+    table { 
+        border: 2px solid #000 !important; 
+        font-size: 12px !important;
+    }
+    th, td { 
+        border: 1px solid #000 !important; 
+        padding: 8px !important;
+    }
+}
+</style>
+{% endblock %}

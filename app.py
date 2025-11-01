@@ -655,6 +655,13 @@ def load_user(user_id):
 
 
 # Routes das Páginas --------------------------------------------------------------------------------------------
+
+# Rota para página de relatórios
+@app.route('/relatorios')
+@login_required
+def relatorios():
+    return render_template('relatorios.html', user=current_user)
+
 @app.route('/sac')
 @login_required
 def sac():
@@ -3059,6 +3066,94 @@ def api_dashboard():
         'admissoes_detalhes': admissoes_detalhes,
         'demissoes_detalhes': demissoes_detalhes
     })
+
+
+
+# API para gerar relatórios
+@app.route('/api/relatorios/<tipo>')
+@login_required
+def api_relatorios(tipo):
+    data_inicio = request.args.get('inicio')
+    data_fim = request.args.get('fim')
+    formato = request.args.get('formato', 'json')
+    
+    if tipo == 'rh-funcionarios-ativos':
+        return api_relatorio_rh_funcionarios_ativos()
+    
+    # Outros tipos de relatório...
+    return jsonify({'message': f'Relatório {tipo} não implementado'}), 400
+
+@app.route('/api/relatorios/rh/funcionarios-ativos')
+@login_required
+def api_relatorio_rh_funcionarios_ativos():
+    try:
+        # Recebe os parâmetros de data
+        inicio = request.args.get('inicio')
+        fim = request.args.get('fim')
+        query = Funcionario.query.filter_by(ativo=True)
+        if inicio:
+            try:
+                data_inicio = datetime.strptime(inicio, '%Y-%m-%d').date()
+                # query = query.filter(Funcionario.data_admissao >= data_inicio)
+            except Exception:
+                pass
+        if fim:
+            try:
+                data_fim = datetime.strptime(fim, '%Y-%m-%d').date()
+                query = query.filter(Funcionario.data_admissao <= data_fim)
+            except Exception:
+                pass
+        funcionarios = query.order_by(Funcionario.nome).all()
+        dados_relatorio = []
+        for func in funcionarios:
+            data_fim_emp = func.data_demissao if func.data_demissao else datetime.now().date()
+            delta = data_fim_emp - func.data_admissao
+            anos = delta.days // 365
+            meses = (delta.days % 365) // 30
+            evolucao = EvolucaoSalarial.query.filter_by(
+                funcionario_id=func.id
+            ).order_by(EvolucaoSalarial.data_promocao.desc()).first()
+            ultima_evolucao = evolucao.data_promocao.strftime('%d/%m/%Y') if evolucao else 'Nenhuma'
+            dados_relatorio.append({
+                'nome': func.nome,
+                're': func.re,
+                'cargo': func.cargo,
+                'data_admissao': func.data_admissao.strftime('%d/%m/%Y'),
+                'salario_atual': f"R$ {float(func.salario_atual):,.2f}",
+                'tempo_empresa': f"{anos} anos e {meses} meses",
+                'ultima_evolucao': ultima_evolucao
+            })
+        return jsonify({
+            'success': True,
+            'relatorio': {
+                'titulo': 'Relatório de Funcionários Ativos',
+                'data_geracao': datetime.now().strftime('%d/%m/%Y %H:%M'),
+                'total_funcionarios': len(dados_relatorio),
+                'dados': dados_relatorio
+            }
+        })
+    except Exception as e:
+        logger.error(f"Erro ao gerar relatório de funcionários ativos: {e}", exc_info=True)
+        return jsonify({'success': False, 'message': str(e)}), 500
+    
+# Adicione esta função auxiliar dentro da classe app (ou como função separada)
+def _obter_ultima_evolucao(funcionario_id):
+    """Obtém a última evolução salarial do funcionário"""
+    evolucao = EvolucaoSalarial.query.filter_by(
+        funcionario_id=funcionario_id
+    ).order_by(EvolucaoSalarial.data_promocao.desc()).first()
+    
+    if evolucao:
+        return evolucao.data_promocao.strftime('%d/%m/%Y')
+    return 'Nenhuma'
+
+@app.route('/relatorios/rh/funcionarios-ativos')
+@login_required
+def relatorio_rh_funcionarios_ativos():
+    # Recebe os parâmetros de data da query string
+    inicio = request.args.get('inicio')
+    fim = request.args.get('fim')
+    return render_template('relatorio_rh_funcionarios.html', user=current_user, inicio=inicio, fim=fim)
 
 # Inicializar banco de dados
 def init_db():
